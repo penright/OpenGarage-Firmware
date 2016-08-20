@@ -1,9 +1,9 @@
 #ifndef ESP8266UPDATER_H
 #define ESP8266UPDATER_H
 
-#include "Arduino.h"
-#include "flash_utils.h"
-#include "MD5Builder.h"
+#include <Arduino.h>
+#include <flash_utils.h>
+#include <MD5Builder.h>
 
 #define UPDATE_ERROR_OK                 (0)
 #define UPDATE_ERROR_WRITE              (1)
@@ -36,6 +36,11 @@ class UpdaterClass {
       Will return false if there is not enough space
     */
     bool begin(size_t size, int command = U_FLASH);
+
+    /*
+      Run Updater from asynchronous callbacs
+    */
+    void runAsync(bool async){ _async = async; }
 
     /*
       Writes a buffer to the flash and increments the address
@@ -135,8 +140,13 @@ class UpdaterClass {
       }
       return written;
     }
-    
-    void reset() { _reset(); }  // ray: add public reset function
+   /*
+   * ray: add public reset function
+   */ 
+
+		void reset() { 
+			_reset(); 
+		}  
 
   private:
     void _reset();
@@ -145,6 +155,7 @@ class UpdaterClass {
     bool _verifyHeader(uint8_t data);
     bool _verifyEnd();
 
+    bool _async;
     uint8_t _error;
     uint8_t *_buffer;
     size_t _bufferLen;
