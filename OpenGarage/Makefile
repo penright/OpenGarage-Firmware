@@ -18,7 +18,7 @@
 #====================================================================================
 
 #=== Project specific definitions: sketch and list of needed libraries
-SKETCH ?= ./examples/mainArduino/mainArduino.ino
+SKETCH ?= ./examples/ogMainArduino/ogMainArduino.ino
 LIBS ?= $(ESP_LIBS)/Wire \
         $(ESP_LIBS)/ESP8266WiFi \
         $(ESP_LIBS)/ESP8266mDNS \
