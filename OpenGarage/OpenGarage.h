@@ -60,9 +60,9 @@ public:
   static void set_led(byte status)   { digitalWrite(PIN_LED, status); }
   static void set_relay(byte status) { digitalWrite(PIN_RELAY, status); }
   static void click_relay() {
-    digitalWrite(PIN_RELAY, HIGH);
+    set_relay(HIGH);
     delay(options[OPTION_CDT].ival);
-    digitalWrite(PIN_RELAY, LOW);
+    set_relay(LOW);
   }
   static int find_option(String name);
   static void log_reset();

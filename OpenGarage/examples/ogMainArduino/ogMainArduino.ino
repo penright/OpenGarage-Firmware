@@ -26,7 +26,8 @@
 #include <WiFiUdp.h>
 #include <time.h>
 #include <FS.h>
-#include <BlynkSimpleEsp8266.h>
+// If compiling in Arduino, uncomment the following line
+//#include <BlynkSimpleEsp8266_SSL.h>
 #include <OpenGarage.h>
 
 void do_setup();
