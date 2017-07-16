@@ -27,11 +27,10 @@
 
 #include "OpenGarage.h"
 #include "espconnect.h"
-#include <BlynkSimpleEsp8266.h>
+#include <BlynkSimpleEsp8266_SSL.h>
 
 OpenGarage og;
 ESP8266WebServer *server = NULL;
-BlynkWifi Blynk(_blynkTransport);
 
 WidgetLED blynk_led(BLYNK_PIN_LED);
 WidgetLCD blynk_lcd(BLYNK_PIN_LCD);
@@ -731,7 +730,7 @@ void do_loop() {
         server->begin();
       }
       if(curr_cloud_access_en) {
-        Blynk.begin(og.options[OPTION_AUTH].sval.c_str());
+        Blynk.config(og.options[OPTION_AUTH].sval.c_str()); // use the config function
         Blynk.connect();
       }
       og.state = OG_STATE_CONNECTED;

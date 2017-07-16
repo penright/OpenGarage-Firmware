@@ -24,7 +24,7 @@
 #define _DEFINES_H
 
 /** Firmware version, hardware version, and maximal values */
-#define OG_FWV    105   // Firmware version: 105 means 1.0.5
+#define OG_FWV    106   // Firmware version: 106 means 1.0.6
 
 /** GPIO pins */
 #define PIN_RELAY  15
