@@ -15,7 +15,11 @@ const char html_sta_home[] PROGMEM = R"(<body>
 <div data-role='controlgroup' data-type='horizontal'>
 <button data-theme='b' id='btn_click'>Button</button>  
 <button data-theme='b' id='btn_opts'>Options</button>
-<button data-theme='b' id='btn_log'>Log</button>
+<button data-theme='b' id='btn_log'>Show Log</button>
+</div>
+<span style='display:block;height:5px'></span>
+<div data-role='controlgroup' data-type='horizontal'>
+<button data-theme='c' id='btn_rap'>Reset to AP Mode</button>
 <button data-theme='c' id='btn_rbt'>Reboot</button>
 </div>
 </div>
@@ -46,7 +50,20 @@ setTimeout(function(){location.reload(true);}, 10000);
 }
 });
 }
-});    
+});   
+$('#btn_rap').click(function(e){
+if(confirm('Reset the device to AP mode?')){
+var comm = 'cc?apmode=1&dkey='+($('#dkey').val());
+clear_msg();
+$.getJSON(comm, function(jd) {
+if(jd.result!=1) show_msg('Check device key and try again.',2000,'red');
+else {
+clearInterval(si);
+$('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then open a<br>browser, type in <a href="http://192.168.4.1">http://192.168.4.1</a><br>and continue there.').css('color','green');
+}
+});
+}
+});  
 $('#btn_click').click(function(e) {
 var comm = 'cc?click=1&dkey='+($('#dkey').val());
 clear_msg();

@@ -20,12 +20,12 @@
 #=== Project specific definitions: sketch and list of needed libraries
 SKETCH ?= ./examples/ogMainArduino/ogMainArduino.ino
 LIBS ?= $(ESP_LIBS)/Wire \
-        $(ESP_LIBS)/ESP8266WiFi \
-        $(ESP_LIBS)/ESP8266mDNS \
-        $(ESP_LIBS)/ESP8266WebServer \
-	$(ESP_LIBS)/ESP8266HTTPClient \
-	$(ESP_LIBS)/Blynk \
-	.
+$(ESP_LIBS)/ESP8266WiFi \
+$(ESP_LIBS)/ESP8266mDNS \
+$(ESP_LIBS)/ESP8266WebServer \
+$(ESP_LIBS)/ESP8266HTTPClient \
+$(ESP_LIBS)/Blynk \
+.
 
 # Esp8266 Arduino git location
 ESP_ROOT ?= $(HOME)/esp8266/
@@ -40,7 +40,7 @@ FLASH_LAYOUT ?= eagle.flash.4m.ld
 
 # Upload parameters
 UPLOAD_SPEED ?= 230400
-UPLOAD_PORT ?= /dev/tty.wchusbserial1420
+UPLOAD_PORT ?= /dev/tty.wchusbserial1410
 UPLOAD_VERB ?= -v
 UPLOAD_RESET ?= ck
 

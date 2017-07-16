@@ -62,16 +62,18 @@ void start_network_ap(const char *ssid, const char *pass) {
   WiFi.disconnect();  // disconnect from router
 }
 
-void start_network_sta_with_ap(const char *ssid, const char *pass) {
+void start_network_sta(const char *ssid, const char *pass, bool changemode) {
   if(!ssid || !pass) return;
-  DEBUG_PRINTLN(F("STA mode with AP"));
+  DEBUG_PRINTLN(F("STA mode"));
+  if(changemode) WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
 }
 
+void start_network_sta_with_ap(const char *ssid, const char *pass) {
+  start_network_sta(ssid, pass, false);
+}
+
 void start_network_sta(const char *ssid, const char *pass) {
-  if(!ssid || !pass) return;
-  DEBUG_PRINTLN(F("STA mode"));
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, pass);
+  start_network_sta(ssid, pass, true);
 }
 

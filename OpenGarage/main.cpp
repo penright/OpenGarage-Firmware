@@ -27,7 +27,7 @@
 
 #include "OpenGarage.h"
 #include "espconnect.h"
-#include <BlynkSimpleEsp8266_SSL.h>
+#include <BlynkSimpleEsp8266.h>
 
 OpenGarage og;
 ESP8266WebServer *server = NULL;
@@ -236,11 +236,15 @@ void on_sta_change_controller() {
       // else, set alarm
       og.set_alarm();
     }
-  }
-  if(server->hasArg("reboot")) {
+  } else if(server->hasArg("reboot")) {
     server_send_result(HTML_SUCCESS);
     restart_timeout = millis() + 1000;
     og.state = OG_STATE_RESTART;
+  } else if(server->hasArg("apmode")) {
+    server_send_result(HTML_SUCCESS);
+    og.reset_to_ap();
+  } else {
+    server_send_result(HTML_NOT_PERMITTED);
   }
 }
 
@@ -256,6 +260,7 @@ void on_sta_change_options() {
   byte i;
   OptionStruct *o = og.options;
   
+  byte usi = 0;
   // FIRST ROUND: check option validity
   // do not save option values yet
   for(i=0;i<NUM_OPTIONS;i++,o++) {
@@ -276,11 +281,41 @@ void on_sta_change_options() {
           server_send_result(HTML_DATA_OUTOFBOUND, key);
           return;
         }
+        if(i==OPTION_USI && ival==1) {
+          // mark device IP and gateway IP change
+          usi = 1;
+        }
       }
     }
   }
   
-  
+  // Check device IP and gateway IP changes
+  String dvip, gwip, subn;
+  const char* _dvip = "dvip";
+  const char* _gwip = "gwip";
+  const char* _subn = "subn";
+  if(usi) {
+    if(get_value_by_key(_dvip, dvip)) {
+      if(get_value_by_key(_gwip, gwip)) {
+        // check validity of IP address
+        IPAddress ip;
+        if(!ip.fromString(dvip)) {server_send_result(HTML_DATA_FORMATERROR, _dvip); return;}
+        if(!ip.fromString(gwip)) {server_send_result(HTML_DATA_FORMATERROR, _gwip); return;}
+        if(get_value_by_key(_subn, subn)) {
+          if(!ip.fromString(subn)) {
+            server_send_result(HTML_DATA_FORMATERROR, _subn);
+            return;
+          }
+        }
+      } else {
+        server_send_result(HTML_DATA_MISSING, _gwip);
+        return;
+      }              
+    } else {
+      server_send_result(HTML_DATA_MISSING, _dvip);
+      return;
+    }
+  }
   // Check device key change
   String nkey, ckey;
   const char* _nkey = "nkey";
@@ -318,6 +353,16 @@ void on_sta_change_options() {
     }
   }
 
+  if(usi) {
+    get_value_by_key(_dvip, dvip);
+    get_value_by_key(_gwip, gwip);
+    og.options[OPTION_DVIP].sval = dvip;
+    og.options[OPTION_GWIP].sval = gwip;
+    if(get_value_by_key(_subn, subn)) {
+      og.options[OPTION_SUBN].sval = subn;
+    }
+  }
+  
   if(get_value_by_key(_nkey, nkey)) {
       og.options[OPTION_DKEY].sval = nkey;
   }
@@ -332,7 +377,9 @@ void on_sta_options() {
   OptionStruct *o = og.options;
   for(byte i=0;i<NUM_OPTIONS;i++,o++) {
     if(!o->max) {
-      if(i==OPTION_NAME || i==OPTION_AUTH || i==OPTION_IFTT) {  // only output selected string options
+      if(i==OPTION_PASS || i==OPTION_DKEY) { // do not output password or device key
+        continue;
+      } else {
         html += F("\"");
         html += o->name;
         html += F("\":");
@@ -362,17 +409,17 @@ void on_ap_scan() {
 void on_ap_change_config() {
   if(curr_mode == OG_MOD_STA) return;
   String html = FPSTR(html_mobile_header);
-  if(server->hasArg("ssid")) {
+  if(server->hasArg("ssid")&&server->arg("ssid").length()!=0) {
     og.options[OPTION_SSID].sval = server->arg("ssid");
     og.options[OPTION_PASS].sval = server->arg("pass");
-    og.options[OPTION_AUTH].sval = server->arg("auth");
-    if(og.options[OPTION_SSID].sval.length() == 0) {
-      server_send_result(HTML_DATA_MISSING, "ssid");
-      return;
-    }
+    // if cloud token is provided, save it
+    if(server->hasArg("auth")&&server->arg("auth").length()!=0)
+      og.options[OPTION_AUTH].sval = server->arg("auth");
     og.options_save();
     server_send_result(HTML_SUCCESS);
     og.state = OG_STATE_TRY_CONNECT;
+  } else {
+    server_send_result(HTML_DATA_MISSING, "ssid");
   }
 }
 
@@ -423,7 +470,11 @@ void process_ui()
     if(!button_down_time) {
       button_down_time = millis();
     } else {
-      if(millis() > button_down_time + BUTTON_RESET_TIMEOUT) {
+      ulong curr = millis();
+      if(curr > button_down_time + BUTTON_FACRESET_TIMEOUT) {
+        led_blink_ms = 0;
+        og.set_led(LOW);
+      } else if(curr > button_down_time + BUTTON_APRESET_TIMEOUT) {
         led_blink_ms = 0;
         og.set_led(HIGH);
       }
@@ -432,8 +483,10 @@ void process_ui()
   else {
     if (button_down_time > 0) {
       ulong curr = millis();
-      if(curr > button_down_time + BUTTON_RESET_TIMEOUT) {
+      if(curr > button_down_time + BUTTON_FACRESET_TIMEOUT) {
         og.state = OG_STATE_RESET;
+      } else if(curr > button_down_time + BUTTON_APRESET_TIMEOUT) {
+        og.reset_to_ap();
       } else if(curr > button_down_time + 50) {
         og.click_relay();
       }
@@ -496,13 +549,13 @@ void on_sta_upload() {
   HTTPUpload& upload = server->upload();
   if(upload.status == UPLOAD_FILE_START){
     WiFiUDP::stopAll();
+    Blynk.disconnect(); // disconnect Blynk during firmware upload
     DEBUG_PRINT(F("prepare to upload: "));
     DEBUG_PRINTLN(upload.filename);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace()-0x1000)&0xFFFFF000;
     if(!Update.begin(maxSketchSpace)) {
       DEBUG_PRINTLN(F("not enough space"));
     }
-    
   } else if(upload.status == UPLOAD_FILE_WRITE) {
     DEBUG_PRINT(".");
     if(Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
@@ -512,7 +565,7 @@ void on_sta_upload() {
   } else if(upload.status == UPLOAD_FILE_END) {
     
     DEBUG_PRINTLN(F("upload completed"));
-   
+       
   } else if(upload.status == UPLOAD_FILE_ABORTED){
     Update.end();
     DEBUG_PRINTLN(F("upload aborted"));
@@ -700,13 +753,15 @@ void do_loop() {
     } else {
       led_blink_ms = LED_SLOW_BLINK;
       start_network_sta(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
+      og.config_ip();
       og.state = OG_STATE_CONNECTING;
       connecting_timeout = millis() + 60000;
     }
     break;
   case OG_STATE_TRY_CONNECT:
     led_blink_ms = LED_SLOW_BLINK;
-    start_network_sta_with_ap(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());    
+    start_network_sta_with_ap(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
+    og.config_ip();
     og.state = OG_STATE_CONNECTED;
     break;
     
@@ -734,6 +789,8 @@ void do_loop() {
         Blynk.connect();
       }
       og.state = OG_STATE_CONNECTED;
+      // save device IP and gateway information
+      
       led_blink_ms = 0;
       og.set_led(LOW);
       
@@ -772,7 +829,6 @@ void do_loop() {
     
   case OG_STATE_RESET:
     og.state = OG_STATE_INITIAL;
-    DEBUG_PRINTLN(F("reset"));
     og.options_reset();
     og.log_reset();
     restart_timeout = millis();

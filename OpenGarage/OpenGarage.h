@@ -25,6 +25,7 @@
 
 #include <Arduino.h>
 #include <FS.h>
+#include <ESP8266WiFi.h>
 #include "defines.h"
 
 struct OptionStruct {
@@ -76,6 +77,12 @@ public:
     else alarm = options[OPTION_ALM].ival * 10 + 1;
   }
   static void reset_alarm() { alarm = 0; }
+  static void reset_to_ap() {
+    options[OPTION_MOD].ival = OG_MOD_AP;
+    options_save();
+    state = OG_STATE_RESTART;
+  }
+  static void config_ip();
 private:
   static ulong echo_time;
   static ulong read_distance_once();

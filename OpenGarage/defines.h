@@ -98,17 +98,25 @@ typedef enum {
   OPTION_CDT,     // click delay time
   OPTION_MOD,     // mode
   OPTION_ATI,     // automation interval (in minutes)
-  OPTION_ATO,     // automation options 
+  OPTION_ATO,     // automation options
+  OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password
   OPTION_AUTH,    // authentication token
   OPTION_DKEY,    // device key
   OPTION_NAME,    // device name
   OPTION_IFTT,    // IFTTT token
+  OPTION_DVIP,    // device IP
+  OPTION_GWIP,    // gateway IP
+  OPTION_SUBN,    // subnet
   NUM_OPTIONS     // number of options
 } OG_OPTION_enum;
 
-#define BUTTON_RESET_TIMEOUT  4000  // if button is pressed for at least 5 seconds, reset
+// if button is pressed for at least 5 seconds, reset to AP mode
+#define BUTTON_APRESET_TIMEOUT 4000
+// if button is pressed for at least 10 seconds, factory reset
+#define BUTTON_FACRESET_TIMEOUT  8000
+
 #define LED_FAST_BLINK 100
 #define LED_SLOW_BLINK 500
 

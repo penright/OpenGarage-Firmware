@@ -46,12 +46,16 @@ OptionStruct OpenGarage::options[] = {
   {"mod", OG_MOD_AP,   255, ""},
   {"ati", 30,          720, ""},
   {"ato", OG_AUTO_NONE,255, ""},
+  {"usi", 0,             1, ""},
   {"ssid", 0, 0, ""},  // string options have 0 max value
   {"pass", 0, 0, ""},
   {"auth", 0, 0, ""},
   {"dkey", 0, 0, DEFAULT_DKEY},
   {"name", 0, 0, DEFAULT_NAME},
-  {"iftt", 0, 0, ""}
+  {"iftt", 0, 0, ""},
+  {"dvip", 0, 0, "-.-.-.-"},
+  {"gwip", 0, 0, "-.-.-.-"},
+  {"subn", 0, 0, "255.255.255.0"}
 };
     
 void OpenGarage::begin() {
@@ -133,10 +137,16 @@ void OpenGarage::options_load() {
     DEBUG_PRINTLN(F("failed"));
     return;
   }
+  byte nopts = 0;
   while(file.available()) {
     String name = file.readStringUntil(':');
     String sval = file.readStringUntil('\n');
     sval.trim();
+    /*DEBUG_PRINT(name);
+    DEBUG_PRINT(":");
+    DEBUG_PRINTLN(sval);*/
+    nopts++;
+    if(nopts>NUM_OPTIONS+1) break;
     int idx = find_option(name);
     if(idx<0) continue;
     if(options[idx].max) {  // this is an integer option
@@ -284,6 +294,16 @@ void OpenGarage::play_note(uint freq) {
   }
 }
 
+void OpenGarage::config_ip() {
+  if(options[OPTION_USI].ival) {
+    IPAddress dvip, gwip, subn;
+    if(dvip.fromString(options[OPTION_DVIP].sval) &&
+       gwip.fromString(options[OPTION_GWIP].sval) &&
+       subn.fromString(options[OPTION_SUBN].sval)) {
+      WiFi.config(dvip, gwip, subn);
+    }
+  }
+}
 #include "pitches.h"
 
 void OpenGarage::play_startup_tune() {
