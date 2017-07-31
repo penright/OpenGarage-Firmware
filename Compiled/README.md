@@ -2,14 +2,14 @@ This folder contains compiled OpenGarage firmware files.
 
 To use OTA (over-the-air) update:
 
-* Download the firmware file (in .bin format)
+* Download the specific firmware file (e.g. og_1.0.6.bin)
 
 * Before uploading, close the Blynk and OpenGarage app if 
   you use either of them, to avoid them interfering with
   the upload process.
   
 * On your OpenGarage's web interface, click 'Update' at 
-  the bottom of the homepage. Select the firmware file,
+  the bottom of the homepage. Select the firmware .bin file,
   type in device key, and 'Submit'. Wait till it finishes.
   
 * If the upload fails for any reason, you can try again.
