@@ -42,7 +42,7 @@ id('butt').disabled=false;id('ssid').disabled=false;id('pass').disabled=false;id
 }
 }
 var comm='cc?ssid='+encodeURIComponent(id('ssid').value)+'&pass='+encodeURIComponent(id('pass').value)+'&auth='+id('auth').value;
-xhr.open('POST', comm, true); xhr.send();
+xhr.open('GET', comm, true); xhr.send();
 id('butt').innerHTML='Connecting...';
 id('butt').disabled=true;id('ssid').disabled=true;id('pass').disabled=true;id('auth').disabled=true;
 }
