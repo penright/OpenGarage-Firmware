@@ -1,9 +1,22 @@
 
+Fork of https://github.com/OpenGarage/OpenGarage-Firmware
+
+Issues Fixed:
+=======
+* WDT Resets if ultrasonic sensor not connected
+* Save of SSID/Password failed
+
+Adds:
+=======
+* Built in automation to close door at a certain time 
+* Built in MQTT support - allows adding workflow using things like NodeRed
+
+
 This folder contains the OpenGarage firmware code for Arduino with ESP8266.
 
 For details, visit [http://opengarage.io](http://opengarage.io)
 
-<img src="Screenshots/1_og_ap.png" height=200> <img src="Screenshots/2_og_home.png" height=200> <img src="Screenshots/3_og_log.png" height=200> <img src="Screenshots/4_og_options.png" height=200> <img src="Screenshots/5_og_update.png" height=200> <img src="Screenshots/6_og_blynk_app.png" height=200>
+<img src="Screenshots/1_og_ap.png" height=200> <img src="Screenshots/2_og_home.png" height=200> <img src="Screenshots/3_og_log.png" height=200> <img src="Screenshots/4_og_options.png" height=200><img src="Screenshots/7_og_options_int.png" height=200> <img src="Screenshots/5_og_update.png" height=200> <img src="Screenshots/6_og_blynk_app.png" height=200>
 
 Updates:
 =======
