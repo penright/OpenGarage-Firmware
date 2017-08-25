@@ -600,7 +600,8 @@ void perform_notify(String s) {
 
 void perform_automation(byte event) {
   byte ato = og.options[OPTION_ATO].ival;
-  if(!ato) {
+  byte atob = og.options[OPTION_ATOB].ival;
+  if(!ato&&!atob) {
     justopen_timestamp = 0;
     return;
   }
@@ -635,6 +636,36 @@ void perform_automation(byte event) {
         }
         justopen_timestamp = 0;
       }
+      
+
+      int curr_utc_hour = (curr_utc_time % 86400)/3600;
+      if( curr_utc_hour>= (ulong)og.options[OPTION_ATIB].ival) {
+        // still open past time, perform action
+        DEBUG_PRINTLN("Door is open after time limit");
+        if(atob & OG_AUTO_NOTIFY) {
+          // send notification
+          String s = og.options[OPTION_NAME].sval+" is open after ";
+          s+= og.options[OPTION_ATIB].ival;
+          s+= " UTC. Current hour:";
+          s+= curr_utc_hour;
+          if(atob & OG_AUTO_CLOSE) {
+            s+= " It will be auto-closed shortly";
+          } else {
+            s+= " This is a reminder for you.";
+          }
+          perform_notify(s);
+        }
+        if(atob & OG_AUTO_CLOSE) {
+          // auto close door
+          // alarm is mandatory in auto-close
+          if(!og.options[OPTION_ALM].ival) { og.set_alarm(OG_ALM_5); }
+          else { 
+            og.set_alarm(); 
+          }
+        }
+        justopen_timestamp = 0;
+      }
+
     }
   } else {
     justopen_timestamp = 0;

@@ -46,6 +46,8 @@ OptionStruct OpenGarage::options[] = {
   {"mod", OG_MOD_AP,   255, ""},
   {"ati", 30,          720, ""},
   {"ato", OG_AUTO_NONE,255, ""},
+  {"atib", 3,          24, ""},
+  {"atob", OG_AUTO_NONE,255, ""},
   {"usi", 0,             1, ""},
   {"ssid", 0, 0, ""},  // string options have 0 max value
   {"pass", 0, 0, ""},

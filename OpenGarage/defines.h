@@ -99,6 +99,8 @@ typedef enum {
   OPTION_MOD,     // mode
   OPTION_ATI,     // automation interval (in minutes)
   OPTION_ATO,     // automation options
+  OPTION_ATIB,     // automation interval B (in hours)
+  OPTION_ATOB,     // automation options B
   OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password

@@ -36,9 +36,12 @@ const char html_sta_options[] PROGMEM = R"(<body>
 </select></td></tr>      
 <tr><td><b>Cloud Token:</b></td><td><input type='text' size=24 maxlength=32 id='auth' data-mini='true' value='-'></td></tr>
 <tr><td><b>IFTTT Key:<a href='#ifttInfo' data-rel='popup' data-role='button' data-inline='true' data-transition='pop' data-icon='info' data-theme='c' data-iconpos='notext'>Learn more</a><div data-role='popup' id='ifttInfo' class='ui-content' data-theme='b' style='max-width:320px;'><p><a href='https://ifttt.com' target='_blank'>IFTTT</a> provides additional notification options (e.g. SMS, email) besides Blynk.</p></div></b></td><td><input type='text' size=24 maxlength=64 id='iftt' data-mini='true' value='-'></td></tr>
-<tr><td><b>Automation:</b></td><td>If door is open for more than</td></tr>
+<tr><td><b>Automation:</b></td><tr><td>If door is open for more than</td></tr></tr>
 <tr><td colspan=2>
 <table><tr><td><input type='text' size=3 maxlength=3 id='ati' value=30 data-mini='true'></td><td>minutes:</td><td><input type='checkbox' id='ato0' data-mini='true'><label for='ato0'>Notify me</label></td><td><input type='checkbox' id='ato1' data-mini='true'><label for='ato1'>Auto-close</label></td></tr></table>
+<tr><td>If door is open later than</td></tr>
+<tr><td colspan=2>
+<table><tr><td><input type='text' size=3 maxlength=3 id='atib' value=10 data-mini='true'></td><td> UTC (Military):</td><td><input type='checkbox' id='atob0' data-mini='true'><label for='atob0'>Notify me</label></td><td><input type='checkbox' id='atob1' data-mini='true'><label for='atob1'>Auto-close</label></td></tr></table>
 </td></tr>
 </table>
 </div>
@@ -107,9 +110,13 @@ comm+='&alm='+$('#alm').val();
 comm+='&htp='+$('#htp').val();
 comm+='&cdt='+$('#cdt').val();
 comm+='&ati='+$('#ati').val();
+comm+='&atib='+$('#atib').val();
 var ato=0;
 for(var i=1;i>=0;i--) { ato=(ato<<1)+eval_cb('#ato'+i); }
 comm+='&ato='+ato;
+var atob=0;
+for(var i=1;i>=0;i--) { atob=(atob<<1)+eval_cb('#atob'+i); }
+comm+='&atob='+atob;
 comm+='&name='+encodeURIComponent($('#name').val());
 comm+='&auth='+encodeURIComponent($('#auth').val());
 comm+='&iftt='+encodeURIComponent($('#iftt').val());
@@ -147,7 +154,9 @@ $('#riv').val(jd.riv);
 $('#htp').val(jd.htp);
 $('#cdt').val(jd.cdt);
 $('#ati').val(jd.ati);
+$('#atib').val(jd.atib);
 for(var i=0;i<=1;i++) {if(jd.ato&(1<<i)) $('#ato'+i).attr('checked',true).checkboxradio('refresh');}
+for(var i=0;i<=1;i++) {if(jd.atob&(1<<i)) $('#atob'+i).attr('checked',true).checkboxradio('refresh');}
 $('#name').val(jd.name);
 $('#auth').val(jd.auth);
 $('#iftt').val(jd.iftt);
