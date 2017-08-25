@@ -108,6 +108,7 @@ typedef enum {
   OPTION_DKEY,    // device key
   OPTION_NAME,    // device name
   OPTION_IFTT,    // IFTTT token
+  OPTION_MQTT,    // MQTT token
   OPTION_DVIP,    // device IP
   OPTION_GWIP,    // gateway IP
   OPTION_SUBN,    // subnet

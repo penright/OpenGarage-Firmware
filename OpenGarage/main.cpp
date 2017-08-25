@@ -28,12 +28,17 @@
 #include "OpenGarage.h"
 #include "espconnect.h"
 #include <BlynkSimpleEsp8266.h>
+#include <PubSubClient.h> //https://github.com/Imroy/pubsubclient
 
 OpenGarage og;
 ESP8266WebServer *server = NULL;
 
 WidgetLED blynk_led(BLYNK_PIN_LED);
 WidgetLCD blynk_lcd(BLYNK_PIN_LCD);
+
+static WiFiClient wificlient;
+PubSubClient mqttclient(wificlient);
+
 
 static String scanned_ssids;
 static byte read_cnt = 0;
@@ -50,6 +55,7 @@ static byte curr_mode;
 static byte door_status_hist = 0;
 static ulong curr_utc_time = 0;
 static HTTPClient http;
+
 void do_setup();
 
 void server_send_html(String html) {
@@ -441,6 +447,22 @@ void on_ap_try_connect() {
   }
 }
 
+// MQTT callback to read "Button" requests
+void mqtt_callback(const MQTT::Publish& pub) { 
+  //DEBUG_PRINTLN(pub.topic());
+  //DEBUG_PRINTLN(pub.payload_string());
+  if (pub.payload_string() == "Button") { 								//MQTT: If "Button" in topic turn the output on/open the door 
+    if(!og.options[OPTION_ALM].ival) {
+      // if alarm is not enabled, trigger relay right away
+      og.click_relay();
+      } 
+	else {
+      // else, set alarm
+      og.set_alarm();
+      }
+  } 
+}
+
 void do_setup()
 {
   DEBUG_BEGIN(115200);
@@ -460,6 +482,7 @@ void do_setup()
     DEBUG_PRINTLN(og.options[OPTION_HTP].ival);
   }
   led_blink_ms = LED_FAST_BLINK;
+  
 }
 
 void process_ui()
@@ -595,6 +618,16 @@ void perform_notify(String s) {
     http.POST("{\"value1\":\""+s+"\"}");
     http.writeToStream(&Serial);
     http.end();
+    DEBUG_PRINTLN(""); //WriteToStream doesn't include LF/CR
+  }
+
+  //Mqtt notification
+  if(og.options[OPTION_MQTT].sval.length()>8) {
+    if (!mqttclient.connected()) {
+       mqttclient.connect(og.options[OPTION_NAME].sval); 
+    }
+    DEBUG_PRINTLN("Sending MQTT Notification");
+    mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
   }
 }
 
@@ -766,6 +799,8 @@ void process_alarm() {
 }
 
 void do_loop() {
+
+
   static ulong connecting_timeout;
   
   switch(og.state) {
@@ -819,6 +854,7 @@ void do_loop() {
         Blynk.config(og.options[OPTION_AUTH].sval.c_str()); // use the config function
         Blynk.connect();
       }
+
       og.state = OG_STATE_CONNECTED;
       // save device IP and gateway information
       
@@ -826,6 +862,21 @@ void do_loop() {
       og.set_led(LOW);
       
       DEBUG_PRINTLN(WiFi.localIP());
+
+      //Now that we have an IP, connect to MQTT
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        if (!mqttclient.connected()) {
+          mqttclient.set_server(og.options[OPTION_MQTT].sval, 1883);
+          DEBUG_PRINTLN("MQTT Not Connected - connecting...");
+          if (mqttclient.connect(og.options[OPTION_NAME].sval)) {
+            DEBUG_PRINTLN("MQTT Connected, subscribing");
+            mqttclient.set_callback(mqtt_callback); 		
+            mqttclient.subscribe(og.options[OPTION_NAME].sval); //Backwards compat w/ existing MQTT code
+            mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN"); //More standard scheme
+          }else{ DEBUG_PRINTLN("MQTT Failed to Connect");}
+        }
+      }
+
     } else {
       if(millis() > connecting_timeout) {
         og.state = OG_STATE_INITIAL;
@@ -871,6 +922,17 @@ void do_loop() {
   if(og.state == OG_STATE_CONNECTED && curr_mode == OG_MOD_STA) {
     time_keeping();
     check_status();
+
+    //Reconnect if MQTT connection lost
+    if (!mqttclient.connected()) {
+      DEBUG_PRINTLN("MQTT Not connected- Reconnect MQTT");
+      mqttclient.connect(og.options[OPTION_NAME].sval);
+      mqttclient.set_callback(mqtt_callback); 		
+      mqttclient.subscribe(og.options[OPTION_NAME].sval);
+      mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN");
+      DEBUG_PRINTLN("Subscribed to MQTT Topic");
+    }
+    else {mqttclient.loop();} //Processes MQTT Pings/keep alives
   }
   
   if(curr_mode == OG_MOD_AP) {

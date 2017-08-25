@@ -55,6 +55,7 @@ OptionStruct OpenGarage::options[] = {
   {"dkey", 0, 0, DEFAULT_DKEY},
   {"name", 0, 0, DEFAULT_NAME},
   {"iftt", 0, 0, ""},
+  {"mqtt", 0, 0, "-.-.-.-"},
   {"dvip", 0, 0, "-.-.-.-"},
   {"gwip", 0, 0, "-.-.-.-"},
   {"subn", 0, 0, "255.255.255.0"}
