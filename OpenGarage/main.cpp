@@ -707,6 +707,7 @@ void perform_automation(byte event) {
 
 void check_status() {
   static ulong checkstatus_timeout = 0;
+  static ulong checkstatus_report_timeout = 0;
   if(curr_utc_time > checkstatus_timeout) {
     og.set_led(HIGH);
     distance = og.read_distance();
@@ -720,31 +721,75 @@ void check_status() {
     door_status_hist = (door_status_hist<<1) | door_status;
     byte event = check_door_status_hist();
 
-    // write log record
+    //Upon change
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
+      // write log record
       LogStruct l;
       l.tstamp = curr_utc_time;
       l.status = door_status;
       l.dist = distance;
       og.write_log(l);
+      
+      // IFTTT notification
+      if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
+        http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
+        http.addHeader("Content-Type", "application/json");
+        http.POST("{\"value1\":\""+String(event,DEC)+"\"}");
+        http.writeToStream(&Serial);
+        http.end();
+        DEBUG_PRINTLN(""); //WriteToStream doesn't include LF/CR
+      }
+
+      //Mqtt notification
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        if (!mqttclient.connected()) {
+          mqttclient.connect(og.options[OPTION_NAME].sval); 
+        }
+        DEBUG_PRINTLN("Sending MQTT Notification");
+        mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
+      }
+      
     }
 
-    // report status to Blynk
-    if(curr_cloud_access_en && Blynk.connected()) {
-      Blynk.virtualWrite(BLYNK_PIN_RCNT, read_cnt);
-      Blynk.virtualWrite(BLYNK_PIN_DIST, distance);
-      (door_status) ? blynk_led.on() : blynk_led.off();
-      Blynk.virtualWrite(BLYNK_PIN_IP, get_ip());
-      blynk_lcd.print(0, 0, get_ip());
-      String str = ":";
-      str += og.options[OPTION_HTP].ival;
-      str += " " + get_ap_ssid();
-      blynk_lcd.print(0, 1, str);
+    //Send current status only on change and longer interval
+    if ((curr_utc_time >checkstatus_report_timeout) || (event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) ){
+      // report status to Blynk
+      if(curr_cloud_access_en && Blynk.connected()) {
+        Blynk.virtualWrite(BLYNK_PIN_RCNT, read_cnt);
+        Blynk.virtualWrite(BLYNK_PIN_DIST, distance);
+        (door_status) ? blynk_led.on() : blynk_led.off();
+        Blynk.virtualWrite(BLYNK_PIN_IP, get_ip());
+        blynk_lcd.print(0, 0, get_ip());
+        String str = ":";
+        str += og.options[OPTION_HTP].ival;
+        str += " " + get_ap_ssid();
+        blynk_lcd.print(0, 1, str);
+      }
+      
+      //Mqtt notification
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        if (!mqttclient.connected()) {
+          mqttclient.connect(og.options[OPTION_NAME].sval); 
+        }
+        if(door_status == DOOR_STATUS_REMAIN_OPEN)  {						// MQTT: If door open...
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","OPEN");
+          mqttclient.publish(og.options[OPTION_NAME].sval,"Open"); //Support existing mqtt code
+          DEBUG_PRINTLN("Sending MQTT Notification with state: OPEN");
+        } 
+        else if(door_status == DOOR_STATUS_REMAIN_CLOSED) {					// MQTT: If door closed...
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","CLOSED");
+          mqttclient.publish(og.options[OPTION_NAME].sval,"Closed"); //Support existing mqtt code
+          DEBUG_PRINTLN("Sending MQTT Notification with state: CLOSED");
+        }
+      }
+      //Set to run every 5 minutes -no need to continually send status when changes drive it
+      checkstatus_report_timeout= curr_utc_time + 300L; 
     }
-
+    
+    //Process any built in automations
     perform_automation(event);
-
     checkstatus_timeout = curr_utc_time + og.options[OPTION_RIV].ival;
+    
   }
 }
 
@@ -923,16 +968,18 @@ void do_loop() {
     time_keeping();
     check_status();
 
-    //Reconnect if MQTT connection lost
-    if (!mqttclient.connected()) {
-      DEBUG_PRINTLN("MQTT Not connected- Reconnect MQTT");
-      mqttclient.connect(og.options[OPTION_NAME].sval);
-      mqttclient.set_callback(mqtt_callback); 		
-      mqttclient.subscribe(og.options[OPTION_NAME].sval);
-      mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN");
-      DEBUG_PRINTLN("Subscribed to MQTT Topic");
+    if(og.options[OPTION_MQTT].sval.length()>8) {
+      //Reconnect if MQTT connection lost
+      if (!mqttclient.connected()) {
+        DEBUG_PRINTLN("MQTT Not connected- Reconnect MQTT");
+        mqttclient.connect(og.options[OPTION_NAME].sval);
+        mqttclient.set_callback(mqtt_callback); 		
+        mqttclient.subscribe(og.options[OPTION_NAME].sval);
+        mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN");
+        DEBUG_PRINTLN("Subscribed to MQTT Topic");
+      }
+      else {mqttclient.loop();} //Processes MQTT Pings/keep alives
     }
-    else {mqttclient.loop();} //Processes MQTT Pings/keep alives
   }
   
   if(curr_mode == OG_MOD_AP) {
