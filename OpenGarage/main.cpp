@@ -605,6 +605,25 @@ void check_status_ap() {
   }
 }
 
+void mqtt_connect_subscibe() {
+  static ulong mqtt_subscribe_timeout = 0;
+  if(curr_utc_time > mqtt_subscribe_timeout) {
+    if (!mqttclient.connected()) {
+      DEBUG_PRINTLN("MQTT Not connected- (Re)connect MQTT");
+      mqttclient.set_server(og.options[OPTION_MQTT].sval, 1883);
+      if (mqttclient.connect(og.options[OPTION_NAME].sval)) {
+        mqttclient.set_callback(mqtt_callback); 		
+        mqttclient.subscribe(og.options[OPTION_NAME].sval);
+        mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN/#");
+        DEBUG_PRINTLN("Subscribed to MQTT Topic");
+      }else {
+        DEBUG_PRINTLN("Failed to Connect to MQTT");
+      }
+    }
+    mqtt_subscribe_timeout = curr_utc_time + 35; //Takes about 5 seconds to get through the loop
+  }
+}
+
 void perform_notify(String s) {
   // Blynk notification
   if(curr_cloud_access_en && Blynk.connected()) {
@@ -624,7 +643,7 @@ void perform_notify(String s) {
   //Mqtt notification
   if(og.options[OPTION_MQTT].sval.length()>8) {
     if (!mqttclient.connected()) {
-       mqttclient.connect(og.options[OPTION_NAME].sval); 
+      mqtt_connect_subscibe();
     }
     DEBUG_PRINTLN("Sending MQTT Notification");
     mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
@@ -743,12 +762,11 @@ void check_status() {
       //Mqtt notification
       if(og.options[OPTION_MQTT].sval.length()>8) {
         if (!mqttclient.connected()) {
-          mqttclient.connect(og.options[OPTION_NAME].sval); 
+          mqtt_connect_subscibe();
         }
         DEBUG_PRINTLN("Sending MQTT Notification");
         mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
       }
-      
     }
 
     //Send current status only on change and longer interval
@@ -767,10 +785,7 @@ void check_status() {
       }
       
       //Mqtt notification
-      if(og.options[OPTION_MQTT].sval.length()>8) {
-        if (!mqttclient.connected()) {
-          mqttclient.connect(og.options[OPTION_NAME].sval); 
-        }
+      if((og.options[OPTION_MQTT].sval.length()>8) && (mqttclient.connected())) {
         if(door_status == DOOR_STATUS_REMAIN_OPEN)  {						// MQTT: If door open...
           mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","OPEN");
           mqttclient.publish(og.options[OPTION_NAME].sval,"Open"); //Support existing mqtt code
@@ -908,20 +923,6 @@ void do_loop() {
       
       DEBUG_PRINTLN(WiFi.localIP());
 
-      //Now that we have an IP, connect to MQTT
-      if(og.options[OPTION_MQTT].sval.length()>8) {
-        if (!mqttclient.connected()) {
-          mqttclient.set_server(og.options[OPTION_MQTT].sval, 1883);
-          DEBUG_PRINTLN("MQTT Not Connected - connecting...");
-          if (mqttclient.connect(og.options[OPTION_NAME].sval)) {
-            DEBUG_PRINTLN("MQTT Connected, subscribing");
-            mqttclient.set_callback(mqtt_callback); 		
-            mqttclient.subscribe(og.options[OPTION_NAME].sval); //Backwards compat w/ existing MQTT code
-            mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN"); //More standard scheme
-          }else{ DEBUG_PRINTLN("MQTT Failed to Connect");}
-        }
-      }
-
     } else {
       if(millis() > connecting_timeout) {
         og.state = OG_STATE_INITIAL;
@@ -961,22 +962,16 @@ void do_loop() {
     restart_timeout = millis();
     og.state = OG_STATE_RESTART;
     break;
-  
   }
   
   if(og.state == OG_STATE_CONNECTED && curr_mode == OG_MOD_STA) {
     time_keeping();
     check_status();
 
+    //Handle MQTT
     if(og.options[OPTION_MQTT].sval.length()>8) {
-      //Reconnect if MQTT connection lost
       if (!mqttclient.connected()) {
-        DEBUG_PRINTLN("MQTT Not connected- Reconnect MQTT");
-        mqttclient.connect(og.options[OPTION_NAME].sval);
-        mqttclient.set_callback(mqtt_callback); 		
-        mqttclient.subscribe(og.options[OPTION_NAME].sval);
-        mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN");
-        DEBUG_PRINTLN("Subscribed to MQTT Topic");
+         mqtt_connect_subscibe();
       }
       else {mqttclient.loop();} //Processes MQTT Pings/keep alives
     }
