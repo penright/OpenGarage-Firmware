@@ -743,14 +743,25 @@ void check_status() {
   static ulong checkstatus_report_timeout = 0;
   if(curr_utc_time > checkstatus_timeout) {
     og.set_led(HIGH);
-    distance = og.read_distance();
+    uint threshold = og.options[OPTION_DTH].ival;
+    if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
+      //sensor is ultrasonic
+      distance = og.read_distance();
+      door_status = (distance>threshold)?0:1;
+      if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
+       door_status = 1-door_status; } // reverse logic for side mount
+    }else if (og.options[OPTION_MNT].ival == OG_SWITCH){
+      if (og.get_switch() == HIGH){
+        door_status =0; 
+        distance = threshold + 10;
+      }
+      else{
+        door_status =1; 
+        distance = threshold - 10;
+      }
+    }
     og.set_led(LOW);
     read_cnt = (read_cnt+1)%100;
-    uint threshold = og.options[OPTION_DTH].ival;
-    door_status = (distance>threshold)?0:1;
-    if (og.options[OPTION_MNT].ival == OG_MNT_SIDE)    
-      door_status = 1-door_status;  // reverse logic for side mount
-
     door_status_hist = (door_status_hist<<1) | door_status;
     byte event = check_door_status_hist();
 

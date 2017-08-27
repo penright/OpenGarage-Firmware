@@ -79,6 +79,8 @@ void OpenGarage::begin() {
   
   pinMode(PIN_ECHO, INPUT);
   pinMode(PIN_BUTTON, INPUT_PULLUP);
+
+  pinMode(PIN_SWITCH, INPUT)
   
   state = OG_STATE_INITIAL;
   

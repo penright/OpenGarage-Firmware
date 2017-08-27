@@ -34,6 +34,7 @@
 #define PIN_LED     2
 #define PIN_RESET  16
 #define PIN_BUZZER 13
+#define PIN_SWITCH 4 //D2
 
 // Default device name
 #define DEFAULT_NAME    "My OpenGarage"
@@ -50,6 +51,7 @@
 
 #define OG_MNT_CEILING  0x00
 #define OG_MNT_SIDE     0x01
+#define OG_SWITCH       0x02
 
 #define OG_ALM_NONE     0x00
 #define OG_ALM_5        0x01
