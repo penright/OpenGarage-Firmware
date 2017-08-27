@@ -82,7 +82,7 @@ $('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
 $('#lbl_dist').text(''+jd.dist+' (cm)');
 $('#lbl_status').text(jd.door?'OPEN':'closed').css('color', jd.door?'red':'black');
 $('#lbl_beat').text(jd.rcnt);
-$('#lbl_rssi').text(jd.rssi+' dBm ('+(jd.rssi<-75?'weak':'ok')+')');
+$('#lbl_rssi').text((jd.rssi<-75?'Poor':'OK') +' (' + jd.rssi+' dBm)');
 $('#head_name').text(jd.name);
 });
 }
