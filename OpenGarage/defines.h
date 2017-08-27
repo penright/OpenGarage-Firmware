@@ -123,7 +123,7 @@ typedef enum {
 #define LED_FAST_BLINK 100
 #define LED_SLOW_BLINK 500
 
-#define TIME_SYNC_TIMEOUT  3600
+#define TIME_SYNC_TIMEOUT  1800 //Issues connecting to MQTT can throw off the time function, sync more often
 
 /** Serial debug functions */
 #define SERIAL_DEBUG

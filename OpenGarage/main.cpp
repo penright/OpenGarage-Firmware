@@ -450,7 +450,9 @@ void on_ap_try_connect() {
 
 // MQTT callback to read "Button" requests
 void mqtt_callback(const MQTT::Publish& pub) { 
-  //DEBUG_PRINTLN(pub.topic());
+  //DEBUG_PRINT("MQTT Message Received: ");
+  //DEBUG_PRINT(pub.topic());
+  //DEBUG_PRINT(" Data: ");
   //DEBUG_PRINTLN(pub.payload_string());
   if (pub.payload_string() == "Button") { 								//MQTT: If "Button" in topic turn the output on/open the door 
     if(!og.options[OPTION_ALM].ival) {
@@ -606,7 +608,7 @@ void check_status_ap() {
   }
 }
 
-void mqtt_connect_subscibe() {
+bool mqtt_connect_subscibe() {
   static ulong mqtt_subscribe_timeout = 0;
   if(curr_utc_time > mqtt_subscribe_timeout) {
     if (!mqttclient.connected()) {
@@ -617,11 +619,13 @@ void mqtt_connect_subscibe() {
         mqttclient.subscribe(og.options[OPTION_NAME].sval);
         mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN/#");
         DEBUG_PRINTLN("Subscribed to MQTT Topic");
+        return true;
       }else {
-        DEBUG_PRINTLN("Failed to Connect to MQTT");
+        DEBUG_PRINTLN("  Failed to Connect to MQTT");
+        mqtt_subscribe_timeout = curr_utc_time + 35; //Takes about 5 seconds to get through the loop
+        return false;
       }
     }
-    mqtt_subscribe_timeout = curr_utc_time + 35; //Takes about 5 seconds to get through the loop
   }
 }
 
@@ -649,11 +653,10 @@ void perform_notify(String s) {
 
   //Mqtt notification
   if(og.options[OPTION_MQTT].sval.length()>8) {
-    if (!mqttclient.connected()) {
-      mqtt_connect_subscibe();
+    if (mqttclient.connected()) {
+        DEBUG_PRINTLN("Sending MQTT Notification");
+        mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
     }
-    DEBUG_PRINTLN("Sending MQTT Notification");
-    mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
   }
 }
 
@@ -667,10 +670,10 @@ void perform_automation(byte event) {
   }
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
-    perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
+    //perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
-    perform_notify(og.options[OPTION_NAME].sval + " just closed!");
+    //perform_notify(og.options[OPTION_NAME].sval + " just closed!");
   } else if (event == DOOR_STATUS_REMAIN_OPEN) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
     else {
@@ -761,7 +764,19 @@ void check_status() {
 
     //Upon change
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
+
+      DEBUG_PRINT(curr_utc_time);
+      if(event == DOOR_STATUS_JUST_OPENED)  {	
+        DEBUG_PRINTLN(" Sending State Change event to connected systems, value: DOOR_STATUS_JUST_OPENED"); }
+      else if(event == DOOR_STATUS_JUST_CLOSED) {	
+        DEBUG_PRINTLN(" Sending State Change event to connected systems, value: DOOR_STATUS_JUST_CLOSED"); }
+      else {
+        DEBUG_PRINTLN(" Sending State Change event to connected systems, value: OTHER"); 
+        DEBUG_PRINTLN(String(event,DEC));
+      }
+
       // write log record
+      DEBUG_PRINTLN(" Update Local Log"); 
       LogStruct l;
       l.tstamp = curr_utc_time;
       l.status = door_status;
@@ -770,7 +785,7 @@ void check_status() {
       
       // IFTTT notification
       if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
-        DEBUG_PRINTLN(" Notify IFTTT (State Change)"); //WriteToStream doesn't include LF/CR
+        DEBUG_PRINTLN(" Notify IFTTT (State Change)"); 
         http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
         http.addHeader("Content-Type", "application/json");
         http.POST("{\"value1\":\""+String(event,DEC)+"\"}");
@@ -786,18 +801,25 @@ void check_status() {
 
       //Mqtt notification
       if(og.options[OPTION_MQTT].sval.length()>8) {
-        if (!mqttclient.connected()) {
-          mqtt_connect_subscibe();
+        if (mqttclient.connected()) {
+          DEBUG_PRINTLN(" Update MQTT (State Change)");
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
         }
-        DEBUG_PRINTLN("Sending MQTT Notification");
-        mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
       }
-    }
+
+    } //End state change updates
 
     //Send current status only on change and longer interval
     if ((curr_utc_time >checkstatus_report_timeout) || (event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) ){
+      DEBUG_PRINT(curr_utc_time);
+      if(event == DOOR_STATUS_REMAIN_OPEN)  {	
+        DEBUG_PRINTLN(" Sending State Refresh to connected systems, value: OPEN"); }
+      else if(event == DOOR_STATUS_REMAIN_CLOSED) {	
+        DEBUG_PRINTLN(" Sending State Refresh to connected systems, value: CLOSED"); }
+
       // report status to Blynk
       if(curr_cloud_access_en && Blynk.connected()) {
+        DEBUG_PRINTLN(" Update Blynk (Status Refresh)");
         Blynk.virtualWrite(BLYNK_PIN_RCNT, read_cnt);
         Blynk.virtualWrite(BLYNK_PIN_DIST, distance);
         (door_status) ? blynk_led.on() : blynk_led.off();
@@ -809,21 +831,24 @@ void check_status() {
         blynk_lcd.print(0, 1, str);
       }
       
+      //IFTTT only recieves state change events not ongoing status
+
       //Mqtt notification
       if((og.options[OPTION_MQTT].sval.length()>8) && (mqttclient.connected())) {
+        DEBUG_PRINTLN(" Update MQTT (Status Refresh)");
         if(door_status == DOOR_STATUS_REMAIN_OPEN)  {						// MQTT: If door open...
           mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","OPEN");
           mqttclient.publish(og.options[OPTION_NAME].sval,"Open"); //Support existing mqtt code
-          DEBUG_PRINTLN("Sending MQTT Notification with state: OPEN");
+          //DEBUG_PRINTLN(curr_utc_time + " Sending MQTT State otification: OPEN");
         } 
         else if(door_status == DOOR_STATUS_REMAIN_CLOSED) {					// MQTT: If door closed...
           mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","CLOSED");
           mqttclient.publish(og.options[OPTION_NAME].sval,"Closed"); //Support existing mqtt code
-          DEBUG_PRINTLN("Sending MQTT Notification with state: CLOSED");
+          //DEBUG_PRINTLN(curr_utc_time + " Sending MQTT State Notification: CLOSED");
         }
       }
       //Set to run every 5 minutes -no need to continually send status when changes drive it
-      checkstatus_report_timeout= curr_utc_time + 300L; 
+      checkstatus_report_timeout= curr_utc_time + 120L; 
     }
     
     //Process any built in automations
@@ -886,8 +911,8 @@ void process_alarm() {
   }
 }
 
-void do_loop() {
 
+void do_loop() {
 
   static ulong connecting_timeout;
   
@@ -912,6 +937,7 @@ void do_loop() {
       connecting_timeout = millis() + 60000;
     }
     break;
+
   case OG_STATE_TRY_CONNECT:
     led_blink_ms = LED_SLOW_BLINK;
     start_network_sta_with_ap(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
@@ -1015,6 +1041,7 @@ void do_loop() {
 
 BLYNK_WRITE(V1)
 {
+  DEBUG_PRINTLN("Blynk Remote Open Command Issued");
   if(!og.options[OPTION_ALM].ival) {
     // if alarm is disabled, trigger right away
     if(param.asInt()) {
