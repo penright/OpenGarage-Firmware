@@ -31,7 +31,7 @@ Requirement:
 * Blynk library for Arduino (https://github.com/blynkkk/blynk-library)
 * This (OpenGarage) library
 
-Copy the OpenGarage library to your Arduino's libraries folder. You also need to update two files in the ESP8266 core and Blynk library. See README.txt in the Modifications folder for details.
+Copy the OpenGarage library to your Arduino's libraries folder. You also need to update a file in the ESP8266 core and Blynk library. See README.txt in the Modifications folder for details.
 
 
 Compilation:
