@@ -661,7 +661,7 @@ void perform_notify(String s) {
 }
 
 void perform_automation(byte event) {
-  static bool automationclose_lock=false;
+  static bool automationclose_triggered=false;
   byte ato = og.options[OPTION_ATO].ival;
   byte atob = og.options[OPTION_ATOB].ival;
   if(!ato&&!atob) {
@@ -700,46 +700,38 @@ void perform_automation(byte event) {
         justopen_timestamp = 0;
       }
       
-      if( curr_utc_hour == og.options[OPTION_ATIB].ival) {
+      if(( curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered)) {
         // still open past time, perform action
-        DEBUG_PRINT("Door is open at specified close time: ");
-        DEBUG_PRINTLN(curr_utc_hour);
-        DEBUG_PRINTLN(og.options[OPTION_ATIB].ival);
-        if (automationclose_lock)
-          {DEBUG_PRINTLN("  Door has already been closed once, ignore");}
-        else {
-          DEBUG_PRINTLN("  Door has not been closed yet");
-          automationclose_lock=true;
-          if(atob & OG_AUTO_NOTIFY) {
-            // send notification
-            String s = og.options[OPTION_NAME].sval+" is open after ";
-            s+= og.options[OPTION_ATIB].ival;
-            s+= " UTC. Current hour:";
-            s+= curr_utc_hour;
-            if(atob & OG_AUTO_CLOSE) {
-              s+= " It will be auto-closed shortly";
-            } else {
-              s+= " This is a reminder for you.";
-            }
-            perform_notify(s);
-          }
+        DEBUG_PRINT("Door is open at specified close time and automation not yet triggered: ");
+        automationclose_triggered=true;
+        if(atob & OG_AUTO_NOTIFY) {
+          // send notification
+          String s = og.options[OPTION_NAME].sval+" is open after ";
+          s+= og.options[OPTION_ATIB].ival;
+          s+= " UTC. Current hour:";
+          s+= curr_utc_hour;
           if(atob & OG_AUTO_CLOSE) {
-            // auto close door
-            // alarm is mandatory in auto-close
-            if(!og.options[OPTION_ALM].ival) { og.set_alarm(OG_ALM_5); }
-            else { 
-              og.set_alarm(); 
-            }
+            s+= " It will be auto-closed shortly";
+          } else {
+            s+= " This is a reminder for you.";
           }
-          justopen_timestamp = 0;
+          perform_notify(s);
         }
+        if(atob & OG_AUTO_CLOSE) {
+          // auto close door
+          // alarm is mandatory in auto-close
+          if(!og.options[OPTION_ALM].ival) { og.set_alarm(OG_ALM_5); }
+          else { 
+            og.set_alarm(); 
+          }
+        }
+        justopen_timestamp = 0;
       }
-      else if ((curr_utc_hour > og.options[OPTION_ATIB].ival) && (automationclose_lock))
+      else if ((curr_utc_hour > og.options[OPTION_ATIB].ival) && (automationclose_triggered))
       {
         DEBUG_PRINTLN("Unlocking automation close function");
-        automationclose_lock=false; //Unlock the hour after the setting
+        automationclose_triggered=false; //Unlock the hour after the setting
       }
-
     }
   } else {
     justopen_timestamp = 0;
