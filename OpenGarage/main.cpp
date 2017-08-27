@@ -632,12 +632,18 @@ void perform_notify(String s) {
 
   // IFTTT notification
   if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
+    DEBUG_PRINTLN("Sending IFTTT Notification");
     http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
     http.addHeader("Content-Type", "application/json");
     http.POST("{\"value1\":\""+s+"\"}");
-    http.writeToStream(&Serial);
+    String payload = http.getString();
     http.end();
-    DEBUG_PRINTLN(""); //WriteToStream doesn't include LF/CR
+    if(payload.indexOf("Congratulations") >= 0) {
+      DEBUG_PRINTLN(" Successfully updated IFTTT");
+    }else{
+      DEBUG_PRINT(" Error from IFTTT: ");
+      DEBUG_PRINTLN(payload);
+    }
   }
 
   //Mqtt notification
@@ -751,12 +757,18 @@ void check_status() {
       
       // IFTTT notification
       if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
+        DEBUG_PRINTLN(" Notify IFTTT (State Change)"); //WriteToStream doesn't include LF/CR
         http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
         http.addHeader("Content-Type", "application/json");
         http.POST("{\"value1\":\""+String(event,DEC)+"\"}");
-        http.writeToStream(&Serial);
+        String payload = http.getString();
         http.end();
-        DEBUG_PRINTLN(""); //WriteToStream doesn't include LF/CR
+        if(payload.indexOf("Congratulations") >= 0) {
+          DEBUG_PRINTLN("  Successfully updated IFTTT");
+        }else{
+          DEBUG_PRINT("  ERROR from IFTTT: ");
+          DEBUG_PRINTLN(payload);
+        }
       }
 
       //Mqtt notification
