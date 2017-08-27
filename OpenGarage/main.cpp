@@ -54,6 +54,7 @@ static byte curr_mode;
 // maximum 8 bits
 static byte door_status_hist = 0;
 static ulong curr_utc_time = 0;
+static ulong curr_utc_hour= 0;
 static HTTPClient http;
 
 void do_setup();
@@ -696,7 +697,6 @@ void perform_automation(byte event) {
       }
       
 
-      int curr_utc_hour = (curr_utc_time % 86400)/3600;
       if( curr_utc_hour>= (ulong)og.options[OPTION_ATIB].ival) {
         // still open past time, perform action
         DEBUG_PRINTLN("Door is open after time limit");
@@ -831,15 +831,18 @@ void time_keeping() {
     configured = true;
   }
 
-  if(!curr_utc_time || curr_utc_time > time_keeping_timeout) {
+  if(!curr_utc_time || (curr_utc_time > time_keeping_timeout)) {
     ulong gt = time(nullptr);
     if(!gt) {
       // if we didn't get response, re-try after 2 seconds
       time_keeping_timeout = curr_utc_time + 2;
     } else {
       curr_utc_time = gt;
-      DEBUG_PRINT(F("network time: "));
-      DEBUG_PRINTLN(curr_utc_time);
+      curr_utc_hour = (curr_utc_time % 86400)/3600;
+      DEBUG_PRINT(F("Updated time from NTP: "));
+      DEBUG_PRINT(curr_utc_time);
+      DEBUG_PRINT(" Hour: ");
+      DEBUG_PRINTLN(curr_utc_hour);
       // if we got a response, re-try after TIME_SYNC_TIMEOUT seconds
       time_keeping_timeout = curr_utc_time + TIME_SYNC_TIMEOUT;
       prev_millis = millis();
