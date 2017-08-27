@@ -888,6 +888,7 @@ void time_keeping() {
   }
   while(millis() - prev_millis >= 1000) {
     curr_utc_time ++;
+    curr_utc_hour = (curr_utc_time % 86400)/3600;
     prev_millis += 1000;
   }
 }
