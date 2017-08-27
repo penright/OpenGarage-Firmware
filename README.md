@@ -5,11 +5,13 @@ Issues Fixed:
 =======
 * WDT Resets if ultrasonic sensor not connected
 * Save of SSID/Password failed
+* Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
 
 Adds:
 =======
 * Built in automation to close door at a certain time 
 * Built in MQTT support - allows adding workflow using things like NodeRed
+* Lots of little changes
 
 
 This folder contains the OpenGarage firmware code for Arduino with ESP8266.
