@@ -751,13 +751,16 @@ void check_status() {
       if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
        door_status = 1-door_status; } // reverse logic for side mount
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH){
+     
       if (og.get_switch() == HIGH){
+        DEBUG_PRINTLN("Switch reads High, setting distance to High value (indicating closed)");
         door_status =0; 
-        distance = threshold + 10;
+        distance = threshold + 20;
       }
       else{
+        DEBUG_PRINTLN("Switch reads LOW, setting distance to Low value (indicating open)");
         door_status =1; 
-        distance = threshold - 10;
+        distance = threshold - 20;
       }
     }
     og.set_led(LOW);
