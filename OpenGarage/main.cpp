@@ -671,6 +671,13 @@ void perform_automation(byte event) {
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
     //perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
+
+    //If the door is set to auto close at a certain hour, ensure if manually opened it doesn't autoshut
+    if( (curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered) ){
+      DEBUG_PRINTLN(" Door opened during automation hour, set to not auto-close ");
+      automationclose_triggered=true;
+    }
+
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
     //perform_notify(og.options[OPTION_NAME].sval + " just closed!");
@@ -702,7 +709,7 @@ void perform_automation(byte event) {
       
       if(( curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered)) {
         // still open past time, perform action
-        DEBUG_PRINT("Door is open at specified close time and automation not yet triggered: ");
+        DEBUG_PRINTLN("Door is open at specified close time and automation not yet triggered: ");
         automationclose_triggered=true;
         if(atob & OG_AUTO_NOTIFY) {
           // send notification
