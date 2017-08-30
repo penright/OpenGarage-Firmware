@@ -10,11 +10,12 @@ const char html_sta_options[] PROGMEM = R"(<body>
 <div id='div_basic'>
 <table cellpadding=2>
 <tr><td><b>Device Name:</b></td><td><input type='text' size=20 maxlength=32 id='name' data-mini='true' value='-'></td></tr>
-<select name='mnt' id='mnt' data-mini='true'>
 <tr><td><b>Sensor Type:</b></td><td>
+<select name='mnt' id='mnt' data-mini='true' onChange='disable_dth()'>
 <option value=0>Ceiling Mount</option>
 <option value=1>Side Mount</option>
-<option value=2>Switch</option>
+<option value=2>Switch (Low Mount)</option>
+<option value=3>Switch (High Mount)</option>
 </select></td></tr> 
 <tr><td><b>Threshold (cm): </b></td><td><input type='text' size=4 maxlength=4 id='dth' data-mini='true' value=0></td></tr>
 <tr><td><b>Read Interval (s):</b></td><td><input type='text' size=3 maxlength=3 id='riv' data-mini='true' value=0></td></tr>
@@ -78,6 +79,11 @@ const char html_sta_options[] PROGMEM = R"(<body>
 </div>
 <script>
 function clear_msg() {$('#msg').text('');}  
+function disable_dth() {
+if (parseInt($('#mnt option:selected').val()) >1){
+$('#dth').textinput('disable'); 
+}else{$('#dth').textinput('enable');}
+}
 function show_msg(s) {$('#msg').text(s).css('color','red'); setTimeout(clear_msg, 2000);}
 function goback() {history.back();}
 function eval_cb(n)  {return $(n).is(':checked')?1:0;}
@@ -153,6 +159,7 @@ $('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
 $('#acc').val(jd.acc).selectmenu('refresh');
 $('#alm').val(jd.alm).selectmenu('refresh');
 $('#mnt').val(jd.mnt).selectmenu('refresh');
+if(jd.mnt>1) $('#dth').textinput('disable'); 
 $('#dth').val(jd.dth);
 $('#riv').val(jd.riv);
 $('#htp').val(jd.htp);
@@ -171,7 +178,7 @@ $('#subn').val(jd.subn);
 if(jd.usi>0) $('#usi').attr('checked',true).checkboxradio('refresh');
 $('#dvip').textinput(jd.usi>0?'enable':'disable');
 $('#gwip').textinput(jd.usi>0?'enable':'disable');
-$('#subn').textinput(jd.usi>0?'enable':'disable');             
+$('#subn').textinput(jd.usi>0?'enable':'disable');      
 });
 });
 </script>

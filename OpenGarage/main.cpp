@@ -750,17 +750,27 @@ void check_status() {
       door_status = (distance>threshold)?0:1;
       if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
        door_status = 1-door_status; } // reverse logic for side mount
-    }else if (og.options[OPTION_MNT].ival == OG_SWITCH){
-     
-      if (og.get_switch() == HIGH){
-        DEBUG_PRINTLN("Switch reads High, setting distance to High value (indicating closed)");
+    }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
+      if (og.get_switch() == LOW){
+        DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
         door_status =0; 
         distance = threshold + 20;
       }
       else{
-        DEBUG_PRINTLN("Switch reads LOW, setting distance to Low value (indicating open)");
+        DEBUG_PRINTLN("Low Mount Switch reads HIGH, setting distance to low value (indicating open)");
         door_status =1; 
         distance = threshold - 20;
+      }
+    }else if (og.options[OPTION_MNT].ival == OG_SWITCH_HIGH){
+      if (og.get_switch() == LOW){
+        DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
+        door_status =1; 
+        distance = threshold - 20;
+      }
+      else{
+        DEBUG_PRINTLN("High Mount Switch reads HIGH, setting distance to high value (indicating closed)");
+        door_status =0; 
+        distance = threshold + 20;
       }
     }
     og.set_led(LOW);

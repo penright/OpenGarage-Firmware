@@ -51,7 +51,8 @@
 
 #define OG_MNT_CEILING  0x00
 #define OG_MNT_SIDE     0x01
-#define OG_SWITCH       0x02
+#define OG_SWITCH_LOW   0x02
+#define OG_SWITCH_HIGH  0x03
 
 #define OG_ALM_NONE     0x00
 #define OG_ALM_5        0x01

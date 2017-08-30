@@ -37,7 +37,7 @@ static const char* log_fname = LOG_FNAME;
 OptionStruct OpenGarage::options[] = {
   {"fwv", OG_FWV,      255, ""},
   {"acc", OG_ACC_LOCAL,  2, ""},
-  {"mnt", OG_MNT_CEILING,2, ""},
+  {"mnt", OG_MNT_CEILING,3, ""},
   {"dth", 50,        65535, ""},
   {"riv", 4,           300, ""},
   {"alm", OG_ALM_5,      2, ""},
@@ -80,7 +80,7 @@ void OpenGarage::begin() {
   pinMode(PIN_ECHO, INPUT);
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
-  pinMode(PIN_SWITCH, INPUT);
+  pinMode(PIN_SWITCH, INPUT_PULLUP);
   
   state = OG_STATE_INITIAL;
   
