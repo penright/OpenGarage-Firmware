@@ -4,11 +4,12 @@ const char html_sta_logs[] PROGMEM = R"(<body>
 <div data-role='content'>
 <p>Below are the most recent <label id='lbl_nr'></label> records</p>
 <p>Current time is <label id='lbl_time'></label></p>
+<div data-role="controlgroup" data-type="horizontal">
+<button data-theme="b" id="btn_back">Back</button>
+</div>
 <div data-role='fieldcontain'>
 <table id='tab_log' border='1' cellpadding='4' style='border-collapse:collapse;'><tr><td align='center'><b>Time Stamp</b></td><td align='center'><b>Status</b></td><td align='center'><b>D (cm)</b></td></tr></table>
 </div>
-<div data-role="controlgroup" data-type="horizontal">
-<button data-theme="b" id="btn_back">Back</button>
 </div>
 </div>
 </div>
