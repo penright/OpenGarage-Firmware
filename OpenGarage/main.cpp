@@ -63,6 +63,9 @@ void server_send_html(String html) {
   server->send(200, "text/html", html);
 }
 
+void on_reset_all(){
+  og.state = OG_STATE_RESET;
+}
 void server_send_result(byte code, const char* item = NULL) {
   String html = F("{\"result\":");
   html += code;
@@ -953,6 +956,7 @@ void do_loop() {
       server->on("/js", on_ap_scan);
       server->on("/cc", on_ap_change_config);
       server->on("/jt", on_ap_try_connect);
+      server->on("/resetall",on_reset_all);
       server->begin();
       og.state = OG_STATE_CONNECTED;
       DEBUG_PRINTLN(WiFi.softAPIP());
@@ -989,6 +993,7 @@ void do_loop() {
         server->on("/co", on_sta_change_options);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
+        server->on("/resetall",on_reset_all);
         server->begin();
       }
       if(curr_cloud_access_en) {
