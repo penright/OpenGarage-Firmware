@@ -114,7 +114,7 @@ void OpenGarage::options_reset() {
   if(!SPIFFS.remove(config_fname)) {
     DEBUG_PRINTLN(F("failed to remove config file"));
     return;
-  }
+  }else{DEBUG_PRINTLN(F("Removed config file"));}
   DEBUG_PRINTLN(F("ok"));
 }
 
@@ -122,7 +122,7 @@ void OpenGarage::log_reset() {
   if(!SPIFFS.remove(log_fname)) {
     DEBUG_PRINTLN(F("failed to remove log file"));
     return;
-  }
+  }else{DEBUG_PRINTLN(F("Removed log file"));}
   DEBUG_PRINTLN(F("ok"));  
 }
 
@@ -147,9 +147,9 @@ void OpenGarage::options_load() {
     String name = file.readStringUntil(':');
     String sval = file.readStringUntil('\n');
     sval.trim();
-    /*DEBUG_PRINT(name);
+    DEBUG_PRINT(name);
     DEBUG_PRINT(":");
-    DEBUG_PRINTLN(sval);*/
+    DEBUG_PRINTLN(sval);
     nopts++;
     if(nopts>NUM_OPTIONS+1) break;
     int idx = find_option(name);
