@@ -64,8 +64,15 @@ void start_network_ap(const char *ssid, const char *pass) {
 
 void start_network_sta(const char *ssid, const char *pass, bool changemode) {
   if(!ssid || !pass) return;
-  DEBUG_PRINTLN(F("STA mode"));
-  if(changemode) WiFi.mode(WIFI_STA);
+  DEBUG_PRINTLN(F("Sarting start_network_sta"));
+  if(changemode){
+    DEBUG_PRINTLN(F("Setting STA mode"));
+    WiFi.mode(WIFI_OFF); //Fix for bug in 2.3 on connect after SoftAP mode
+    WiFi.mode(WIFI_STA); 
+  }else{ 
+    WiFi.mode(WIFI_OFF);
+    WiFi.mode(WIFI_AP_STA);
+    DEBUG_PRINTLN(F("Setting to AP+STA mode"));}
   WiFi.begin(ssid, pass);
 }
 
