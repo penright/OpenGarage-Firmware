@@ -107,11 +107,11 @@ typedef enum {
   OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password
-  OPTION_AUTH,    // authentication token
+  OPTION_AUTH,    // Blynk authentication token
   OPTION_DKEY,    // device key
   OPTION_NAME,    // device name
   OPTION_IFTT,    // IFTTT token
-  OPTION_MQTT,    // MQTT token
+  OPTION_MQTT,    // MQTT IP
   OPTION_DVIP,    // device IP
   OPTION_GWIP,    // gateway IP
   OPTION_SUBN,    // subnet
