@@ -608,7 +608,7 @@ void check_status_ap() {
   if(millis() > cs_timeout) {
     DEBUG_PRINTLN(og.read_distance());
     DEBUG_PRINTLN(OG_FWV);
-    cs_timeout = millis() + 2000;
+    cs_timeout = millis() + 5000;
   }
 }
 
@@ -1064,11 +1064,11 @@ void do_loop() {
       }
       else {mqttclient.loop();} //Processes MQTT Pings/keep alives
     }
-  }
-  
-  if(curr_mode == OG_MOD_AP) {
+  }else if (curr_mode == OG_MOD_AP) {
+    //In AP Mode just ouput the distance for testing
     check_status_ap();
   }
+  
   process_ui();
   if(og.alarm)
     process_alarm();
