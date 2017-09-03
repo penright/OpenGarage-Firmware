@@ -189,6 +189,10 @@ void on_sta_controller() {
   html += ESP.getChipId();
   html += F(",\"rssi\":");
   html += (int16_t)WiFi.RSSI();
+  html += F(",\"build\":\"");
+  html += (F(__DATE__));
+  html += F("\",\"Freeheap\":");
+  html += (int16_t)ESP.getFreeHeap();
   html += F("}");
   server_send_html(html);
 }
@@ -480,6 +484,10 @@ void do_setup()
   WiFi.persistent(false); // turn off persistent, fixing flash crashing issue
   og.begin();
   og.options_setup();
+  DEBUG_PRINT(F("Complile Info: "));
+  DEBUG_PRINT(F(__DATE__));
+  DEBUG_PRINT(F(" "));
+  DEBUG_PRINTLN(F(__TIME__));
   curr_cloud_access_en = og.get_cloud_access_en();
   curr_local_access_en = og.get_local_access_en();
   curr_mode = og.get_mode();
