@@ -993,6 +993,8 @@ void do_loop() {
         server->on("/co", on_sta_change_options);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
+        server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png");
+        server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png");
         server->on("/resetall",on_reset_all);
         server->begin();
       }

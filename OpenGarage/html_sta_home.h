@@ -4,11 +4,12 @@ const char html_sta_home[] PROGMEM = R"(<body>
 <div data-role='content'>
 <div data-role='fieldcontain'>
 <table cellpadding='4'>
+<tr><td><b>Door State:</b></td><td><label id='lbl_status'>-</label></td>
+<td><img id='pic' src='' style='width:80px;height:60px;'></td></tr>
 <tr><td><b>Distance:</b></td><td><label id='lbl_dist'>-</label></td></tr>
-<tr><td><b>Door State:</b></td><td><label id='lbl_status'>-</label></td></tr>
-<tr><td><b>Read Count:</b></td><td><label id='lbl_beat'>-</label></td></tr>
-<tr><td><b>WiFi Signal:</b></td><td><label id='lbl_rssi'>-</label></td></tr>
-<tr><td><b>Device Key:</b></td><td><input type='password' size=16 maxlength=32 name='dkey' id='dkey'></td></tr>
+<tr><td><b>Read&nbsp;Count:</b></td><td><label id='lbl_beat'>-</label></td></tr>
+<tr><td><b>WiFi&nbsp;Signal:</b></td><td><label id='lbl_rssi'>-</label></td></tr>
+<tr><td><b>Device&nbsp;Key:</b></td><td><input type='password' size=16 maxlength=32 name='dkey' id='dkey'></td></tr>
 <tr><td colspan=2><label id='msg'></label></td></tr>
 </table>
 <br />
@@ -25,7 +26,7 @@ const char html_sta_home[] PROGMEM = R"(<body>
 </div>
 </div>
 <div data-role='footer' data-theme='c'>
-<p>&nbsp; OpenGarage Firmware <label id='fwv'>-</label>&nbsp;<a href='update' target='_top' data-role='button' data-inline=true data-mini=true>Update</a></p>
+<p>&nbsp; OpenGarage Firmware <label id='fwv'>-</label>&nbsp;<label id='fwct'>-</label>&nbsp;<a href='update' target='_top' data-role='button' data-inline=true data-mini=true>Update</a></p>
 </div>
 </div>
 <script>
@@ -79,11 +80,14 @@ show(); si=setInterval('show()', 3000);
 function show() {
 $.getJSON('jc', function(jd) {
 $('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
+$('#fwct').text('(' + jd.build + ')');
 $('#lbl_dist').text(''+jd.dist+' (cm)');
 $('#lbl_status').text(jd.door?'OPEN':'Closed').css('color', jd.door?'red':'black');
 $('#lbl_beat').text(jd.rcnt);
 $('#lbl_rssi').text((jd.rssi<-75?'Poor':'OK') +' (' + jd.rssi+' dBm)');
 $('#head_name').text(jd.name);
+$('#btn_click').html(jd.door?'Close Door':'Open Door').button('refresh');
+$('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));
 });
 }
 </script>
