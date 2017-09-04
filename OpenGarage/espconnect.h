@@ -57,5 +57,7 @@ extern const char html_sta_home[] PROGMEM;
 extern const char html_sta_options[] PROGMEM;
 extern const char html_sta_update[] PROGMEM;
 extern const char html_sta_logs[] PROGMEM;
+extern const char html_sta_home_pngs_open[] PROGMEM;
+extern const char html_sta_home_pngs_shut[] PROGMEM;
 
 #endif

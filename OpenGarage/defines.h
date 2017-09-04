@@ -27,13 +27,14 @@
 #define OG_FWV    106   // Firmware version: 106 means 1.0.6
 
 /** GPIO pins */
-#define PIN_RELAY  15
+#define PIN_RELAY  15 //D8
 #define PIN_BUTTON  0
 #define PIN_TRIG   12
 #define PIN_ECHO   14
 #define PIN_LED     2
 #define PIN_RESET  16
 #define PIN_BUZZER 13
+#define PIN_SWITCH 4 //D2 on nodemuc
 
 // Default device name
 #define DEFAULT_NAME    "My OpenGarage"
@@ -50,6 +51,8 @@
 
 #define OG_MNT_CEILING  0x00
 #define OG_MNT_SIDE     0x01
+#define OG_SWITCH_LOW   0x02
+#define OG_SWITCH_HIGH  0x03
 
 #define OG_ALM_NONE     0x00
 #define OG_ALM_5        0x01
@@ -104,11 +107,11 @@ typedef enum {
   OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password
-  OPTION_AUTH,    // authentication token
+  OPTION_AUTH,    // Blynk authentication token
   OPTION_DKEY,    // device key
   OPTION_NAME,    // device name
   OPTION_IFTT,    // IFTTT token
-  OPTION_MQTT,    // MQTT token
+  OPTION_MQTT,    // MQTT IP
   OPTION_DVIP,    // device IP
   OPTION_GWIP,    // gateway IP
   OPTION_SUBN,    // subnet

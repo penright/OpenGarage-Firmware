@@ -51,10 +51,11 @@ public:
   static void options_load();
   static void options_save();
   static void options_reset();
-  static void restart() { digitalWrite(PIN_RESET, LOW); }
+  static void restart() { ESP.restart();} //digitalWrite(PIN_RESET, LOW); }
   static uint read_distance(); // centimeter
   static byte get_mode()   { return options[OPTION_MOD].ival; }
   static byte get_button() { return digitalRead(PIN_BUTTON); }
+  static byte get_switch() { return digitalRead(PIN_SWITCH); }
   static byte get_led()    { return digitalRead(PIN_LED); }
   static bool get_cloud_access_en();
   static bool get_local_access_en();
