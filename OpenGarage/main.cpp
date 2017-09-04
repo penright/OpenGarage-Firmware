@@ -806,7 +806,10 @@ void check_status() {
 
     //Upon change
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
+      //Debug Beep
       og.play_note(1000);
+      delay(250);
+      og.play_note(0);
       DEBUG_PRINT(curr_utc_time);
       if(event == DOOR_STATUS_JUST_OPENED)  {	
         DEBUG_PRINTLN(F(" Sending State Change event to connected systems, value: DOOR_STATUS_JUST_OPENED")); }
