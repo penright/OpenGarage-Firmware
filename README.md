@@ -11,7 +11,10 @@ Adds:
 =======
 * Built in automation to close door at a certain time 
 * Built in MQTT support - allows adding workflow using things like NodeRed
-* Lots of little changes
+* Some updates to main page - Change button text to reflect the action (open or close)
+  * Add graphic to home page
+  * Add Clear logs to log page
+ * Tons of little changes - Quick beeps on status changes, ability to see free heap - check committ history for details
 
 
 This folder contains the OpenGarage firmware code for Arduino with ESP8266.
