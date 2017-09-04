@@ -9,6 +9,7 @@ Issues Fixed:
 
 Adds:
 =======
+* Support for magnetic or contact door switch (Installed at bottom or top)
 * Built in automation to close door at a certain time 
 * Built in MQTT support - allows adding workflow using things like NodeRed
 * Some updates to main page - Change button text to reflect the action (open or close)
