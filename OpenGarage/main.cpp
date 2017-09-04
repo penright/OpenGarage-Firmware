@@ -66,6 +66,11 @@ void server_send_html(String html) {
 void on_reset_all(){
   og.state = OG_STATE_RESET;
 }
+
+void on_clear_log(){
+  og.log_reset();
+}
+
 void server_send_result(byte code, const char* item = NULL) {
   String html = F("{\"result\":");
   html += code;
@@ -1001,6 +1006,7 @@ void do_loop() {
         server->on("/co", on_sta_change_options);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
+        server->on("/clearlog", on_clear_log);
         server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png");
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png");
         server->on("/resetall",on_reset_all);
