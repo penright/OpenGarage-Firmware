@@ -591,8 +591,10 @@ void on_sta_upload_fin() {
 void on_sta_upload() {
   HTTPUpload& upload = server->upload();
   if(upload.status == UPLOAD_FILE_START){
+    DEBUG_PRINTLN(F("Stopping all network clients"));
     WiFiUDP::stopAll();
     Blynk.disconnect(); // disconnect Blynk during firmware upload
+    mqttclient.disconnect();
     DEBUG_PRINT(F("prepare to upload: "));
     DEBUG_PRINTLN(upload.filename);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace()-0x1000)&0xFFFFF000;
