@@ -689,6 +689,7 @@ void perform_automation(byte event) {
   }
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
+    //This alert seems unlreated to close door if open at time X - moving to other area
     //perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
 
     //If the door is set to auto close at a certain hour, ensure if manually opened it doesn't autoshut
@@ -699,6 +700,7 @@ void perform_automation(byte event) {
 
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
+    //This alert seems unlreated to close door if open at time X - moving to other area
     //perform_notify(og.options[OPTION_NAME].sval + " just closed!");
   } else if (event == DOOR_STATUS_REMAIN_OPEN) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
@@ -828,6 +830,18 @@ void check_status() {
       l.dist = distance;
       og.write_log(l);
       
+      // Blynk notification
+      byte ato = og.options[OPTION_ATO].ival;
+      if(curr_cloud_access_en && Blynk.connected() && ato) {
+        //The official firmware only sends these notifications on ato enabled (which seems a somewhat unrelated function)
+        //Maintain backwards compat and use same logic
+        DEBUG_PRINTLN(F(" Notify Blynk with text notification"));
+        if(event == DOOR_STATUS_JUST_OPENED)  {	
+          Blynk.notify(og.options[OPTION_NAME].sval + " just opened!");}
+        else if(event == DOOR_STATUS_JUST_CLOSED) {	
+          Blynk.notify(og.options[OPTION_NAME].sval + " just closed!");}
+      }
+
       // IFTTT notification
       if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
         DEBUG_PRINTLN(F(" Notify IFTTT (State Change)")); 
