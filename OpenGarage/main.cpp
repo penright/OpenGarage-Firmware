@@ -631,17 +631,17 @@ bool mqtt_connect_subscibe() {
   static ulong mqtt_subscribe_timeout = 0;
   if(curr_utc_time > mqtt_subscribe_timeout) {
     if (!mqttclient.connected()) {
-      DEBUG_PRINTLN("MQTT Not connected- (Re)connect MQTT");
+      DEBUG_PRINT(F("MQTT Not connected- (Re)connect MQTT"));
       mqttclient.set_server(og.options[OPTION_MQTT].sval, 1883);
       if (mqttclient.connect(og.options[OPTION_NAME].sval)) {
         mqttclient.set_callback(mqtt_callback); 		
         mqttclient.subscribe(og.options[OPTION_NAME].sval);
         mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN/#");
-        DEBUG_PRINTLN("Subscribed to MQTT Topic");
+        DEBUG_PRINTLN(F("......Success, Subscribed to MQTT Topic"));
         return true;
       }else {
-        DEBUG_PRINTLN("  Failed to Connect to MQTT");
         mqtt_subscribe_timeout = curr_utc_time + 35; //Takes about 5 seconds to get through the loop
+        DEBUG_PRINTLN(F("......Failed to Connect to MQTT"));
         return false;
       }
     }
@@ -780,23 +780,23 @@ void check_status() {
        door_status = 1-door_status; } // reverse logic for side mount
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
       if (og.get_switch() == LOW){
-        DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
+        //DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
         door_status =0; 
         distance = threshold + 20;
       }
       else{
-        DEBUG_PRINTLN("Low Mount Switch reads HIGH, setting distance to low value (indicating open)");
+        //DEBUG_PRINTLN("Low Mount Switch reads HIGH, setting distance to low value (indicating open)");
         door_status =1; 
         distance = threshold - 20;
       }
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_HIGH){
       if (og.get_switch() == LOW){
-        DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
+        //DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
         door_status =1; 
         distance = threshold - 20;
       }
       else{
-        DEBUG_PRINTLN("High Mount Switch reads HIGH, setting distance to high value (indicating closed)");
+        //DEBUG_PRINTLN("High Mount Switch reads HIGH, setting distance to high value (indicating closed)");
         door_status =0; 
         distance = threshold + 20;
       }
@@ -810,7 +810,7 @@ void check_status() {
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
       //Debug Beep
       og.play_note(1000);
-      delay(250);
+      delay(500);
       og.play_note(0);
       DEBUG_PRINT(curr_utc_time);
       if(event == DOOR_STATUS_JUST_OPENED)  {	
@@ -990,10 +990,13 @@ void do_loop() {
       server->on("/jt", on_ap_try_connect);
       server->on("/resetall",on_reset_all);
       server->begin();
+      DEBUG_PRINTLN(F("Web Server endpoints (AP mode) registered"));
       og.state = OG_STATE_CONNECTED;
       DEBUG_PRINTLN(WiFi.softAPIP());
     } else {
       led_blink_ms = LED_SLOW_BLINK;
+      DEBUG_PRINT(F("Attempting to connect to SSID: "));
+      DEBUG_PRINTLN(og.options[OPTION_SSID].sval.c_str());
       start_network_sta(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
       og.config_ip();
       og.state = OG_STATE_CONNECTING;
@@ -1003,6 +1006,8 @@ void do_loop() {
 
   case OG_STATE_TRY_CONNECT:
     led_blink_ms = LED_SLOW_BLINK;
+    DEBUG_PRINT(F("Attempting to connect to SSID: "));
+    DEBUG_PRINTLN(og.options[OPTION_SSID].sval.c_str());
     start_network_sta_with_ap(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
     og.config_ip();
     og.state = OG_STATE_CONNECTED;
@@ -1010,6 +1015,9 @@ void do_loop() {
     
   case OG_STATE_CONNECTING:
     if(WiFi.status() == WL_CONNECTED) {
+      DEBUG_PRINT(F("Wireless connected, IP: "));
+      DEBUG_PRINTLN(WiFi.localIP());
+
       if(curr_local_access_en) {
         // use ap ssid as mdns name
         if(MDNS.begin(get_ap_ssid().c_str())) {
@@ -1030,6 +1038,7 @@ void do_loop() {
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png");
         server->on("/resetall",on_reset_all);
         server->begin();
+        DEBUG_PRINTLN(F("Web Server endpoints (STA mode) registered"));
       }
       if(curr_cloud_access_en) {
         Blynk.config(og.options[OPTION_AUTH].sval.c_str()); // use the config function
@@ -1041,8 +1050,6 @@ void do_loop() {
       
       led_blink_ms = 0;
       og.set_led(LOW);
-      
-      DEBUG_PRINTLN(WiFi.localIP());
 
     } else {
       if(millis() > connecting_timeout) {
@@ -1111,7 +1118,7 @@ void do_loop() {
 
 BLYNK_WRITE(V1)
 {
-  DEBUG_PRINTLN(F("Blynk Remote Open Command Issued"));
+  DEBUG_PRINTLN(F("Received Blynk generated button request"));
   if(!og.options[OPTION_ALM].ival) {
     // if alarm is disabled, trigger right away
     if(param.asInt()) {

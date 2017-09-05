@@ -89,7 +89,7 @@
         $('#lbl_dist').text(''+jd.dist+' (cm)');
         $('#lbl_status').text(jd.door?'OPEN':'closed').css('color', jd.door?'red':'black');
         $('#lbl_beat').text(jd.rcnt);
-        $('#lbl_rssi').text(jd.rssi+' dBm ('+(jd.rssi<-75?'weak':'ok')+')');
+        $('#lbl_rssi').text(jd.rssi+' dBm ('+(jd.rssi>-71?'Ok':(jd.rssi>-81?'Weak':'Poor'))+')');
         $('#head_name').text(jd.name);
       });
     }
