@@ -810,7 +810,7 @@ void check_status() {
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
       //Debug Beep
       og.play_note(1000);
-      delay(250);
+      delay(500);
       og.play_note(0);
       DEBUG_PRINT(curr_utc_time);
       if(event == DOOR_STATUS_JUST_OPENED)  {	
