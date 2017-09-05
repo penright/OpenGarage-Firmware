@@ -1,21 +1,42 @@
 
 Fork of https://github.com/OpenGarage/OpenGarage-Firmware
 
+Adds:
+=======
+* Support for magnetic or contact based door switch (Installed at bottom or top)
+* Built in automation to close door at a certain time (No external service required)
+* Built in MQTT support - allows adding workflow using things like NodeRed
+* Some updates to main web page 
+  * Change button text to reflect the specific action (open or close)
+  * Add graphic to home page indicating door status
+  * Close or Open state color coded
+  * More detail on wireless signal strength
+  * Status moved to top, wireless summary moved to front
+* Log Page updates
+  * Clear log button and related functions added
+  * Ordering changed to match mobile app 
+  * Graphic added to better match mobile app
+* API Changes
+  * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity 
+  without worrying or first querying if the door is actually open and vice versa)
+  * Ability to tell free heap
+  * Ability to tell compile date/time 
+  * Clear Logs function added
+  * Reset all function added - for users without a reset button installed
+* Debug improvements - Added tons of serial debug commands, if you get nothing else out of this verbose logging is now included
+* Tons of little usability changes - Quick beeps on status changes as an example
+ Check committ history for details
+
 Issues Fixed:
 =======
 * WDT Resets if ultrasonic sensor not connected
-* Save of SSID/Password failed
+* Save of SSID/Password failure in certain circumstances
 * Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
 
-Adds:
-=======
-* Support for magnetic or contact door switch (Installed at bottom or top)
-* Built in automation to close door at a certain time 
-* Built in MQTT support - allows adding workflow using things like NodeRed
-* Some updates to main page - Change button text to reflect the action (open or close)
-  * Add graphic to home page
-  * Add Clear logs to log page
- * Tons of little changes - Quick beeps on status changes, ability to see free heap - check committ history for details
+
+Notes specific to this fork:
+The mobile app doesn't know about some settings so can't display them (like magnetic sensor support). It doesn't seem to impact the app though.
+If you want the graphics in the log and home page - you need to use the Arduino programming env (specifically the ESPFlash tool to upload them to the flash - at least until I figure out how to send them on the fly)
 
 
 This folder contains the OpenGarage firmware code for Arduino with ESP8266.
