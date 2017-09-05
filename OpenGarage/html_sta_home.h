@@ -84,7 +84,7 @@ $('#fwct').text('(' + jd.build + ')');
 $('#lbl_dist').text(''+jd.dist+' (cm)');
 $('#lbl_status').text(jd.door?'OPEN':'CLOSED').css('color', jd.door?'red':'green');
 $('#lbl_beat').text(jd.rcnt);
-$('#lbl_rssi').text((jd.rssi<-75?'Poor':'OK') +' (' + jd.rssi+' dBm)');
+$('#lbl_rssi').text(jd.rssi+' dBm ('+(jd.rssi>-71?'Ok':(jd.rssi>-81?'Weak':'Poor'))+')');
 $('#head_name').text(jd.name);
 $('#btn_click').html(jd.door?'Close Door':'Open Door').button('refresh');
 $('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));

@@ -11,3 +11,7 @@ OpenGarage/html_sta_home_pngs_open.h
 OpenGarage/html_sta_home_pngs_shut.h
 OpenGarage/html/sta_logs.html
 OpenGarage/html/sta_home.html
+OpenGarage/html/jl
+*.html
+OpenGarage/html/sta_home.html
+OpenGarage/html/sta_logs.html
