@@ -246,14 +246,21 @@ void on_sta_change_controller() {
     server_send_result(HTML_UNAUTHORIZED);
     return;
   }
-  if(server->hasArg("click")) {
+  if(server->hasArg("click") || server->hasArg("close") || server->hasArg("open"))  {
+    DEBUG_PRINTLN(F("Received locally generated button request (click, close, or open)"));
     server_send_result(HTML_SUCCESS);
-    if(!og.options[OPTION_ALM].ival) {
-      // if alarm is not enabled, trigger relay right away
-      og.click_relay();
-    } else {
-      // else, set alarm
-      og.set_alarm();
+    //1 is open
+    if ((server->hasArg("close") && door_status) || (server->hasArg("open") && !door_status) || (server->hasArg("click"))) {
+      DEBUG_PRINTLN(F("Valid command recieved based on door status"));
+      if(!og.options[OPTION_ALM].ival) {
+        // if alarm is not enabled, trigger relay right away
+        og.click_relay();
+      } else {
+        // else, set alarm
+        og.set_alarm();
+      }
+    }else{
+      DEBUG_PRINTLN(F("Command request not valid, door already in requested state"));
     }
   } else if(server->hasArg("reboot")) {
     server_send_result(HTML_SUCCESS);
@@ -640,8 +647,8 @@ bool mqtt_connect_subscibe() {
         DEBUG_PRINTLN(F("......Success, Subscribed to MQTT Topic"));
         return true;
       }else {
-        mqtt_subscribe_timeout = curr_utc_time + 35; //Takes about 5 seconds to get through the loop
         DEBUG_PRINTLN(F("......Failed to Connect to MQTT"));
+        mqtt_subscribe_timeout = curr_utc_time + 50; //Takes about 5 seconds to get through the loop
         return false;
       }
     }
@@ -1043,38 +1050,24 @@ void do_loop() {
       if(curr_cloud_access_en) {
         Blynk.config(og.options[OPTION_AUTH].sval.c_str()); // use the config function
         Blynk.connect();
+        DEBUG_PRINTLN(F("Blynk Connected"));
       }
-
-      og.state = OG_STATE_CONNECTED;
-      // save device IP and gateway information
-      
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        mqtt_connect_subscibe();
+        DEBUG_PRINTLN(F("MQTT Connected"));
+      }
       led_blink_ms = 0;
       og.set_led(LOW);
+      og.state = OG_STATE_CONNECTED;
 
     } else {
       if(millis() > connecting_timeout) {
         og.state = OG_STATE_INITIAL;
-        DEBUG_PRINTLN(F("timeout"));
+        DEBUG_PRINTLN(F("Wifi Connecting timeout"));
       }
     }
     break;
-  
-  case OG_STATE_CONNECTED:
-    if(curr_mode == OG_MOD_AP) {
-      server->handleClient();
-    } else {
-      if(WiFi.status() == WL_CONNECTED) {
-        if(curr_local_access_en)
-          server->handleClient();
-        if(curr_cloud_access_en)
-          Blynk.run();
-      } else {
-        DEBUG_PRINTLN(F("State is CONNECTED but Wifi has no IP"));
-        og.state = OG_STATE_INITIAL;
-      }
-    }
-    break;
-    
+      
   case OG_STATE_RESTART:
     if(curr_local_access_en)
       server->handleClient();
@@ -1092,25 +1085,35 @@ void do_loop() {
     restart_timeout = millis();
     og.state = OG_STATE_RESTART;
     break;
-  }
   
-  if(og.state == OG_STATE_CONNECTED && curr_mode == OG_MOD_STA) {
-    time_keeping();
-    check_status();
-    
-
-    //Handle MQTT
-    if(og.options[OPTION_MQTT].sval.length()>8) {
-      if (!mqttclient.connected()) {
-         mqtt_connect_subscibe();
+  case OG_STATE_CONNECTED: //THIS IS THE MAIN LOOP
+    if(curr_mode == OG_MOD_AP) {
+      server->handleClient();
+      check_status_ap();
+    } else {
+      if(WiFi.status() == WL_CONNECTED) {
+        time_keeping();
+        check_status(); //This checks the door, sends info to services and processes the automation rules
+        if(curr_local_access_en)
+          server->handleClient();
+        if(curr_cloud_access_en)
+          Blynk.run();
+        //Handle MQTT
+        if(og.options[OPTION_MQTT].sval.length()>8) {
+          if (!mqttclient.connected()) {
+            mqtt_connect_subscibe();
+          }
+          else {mqttclient.loop();} //Processes MQTT Pings/keep alives
+        }
+      } else {
+        DEBUG_PRINTLN(F("State is CONNECTED but Wifi has no IP"));
+        og.state = OG_STATE_INITIAL;
       }
-      else {mqttclient.loop();} //Processes MQTT Pings/keep alives
     }
-  }else if (curr_mode == OG_MOD_AP) {
-    //In AP Mode just ouput the distance for testing
-    check_status_ap();
+    break;
   }
-  
+
+  //Nework independent functions, handle events like reset even when not connected
   process_ui();
   if(og.alarm)
     process_alarm();
