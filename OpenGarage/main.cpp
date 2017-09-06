@@ -72,6 +72,10 @@ void on_clear_log(){
   og.log_reset();
 }
 
+void on_test(){
+  //server_send_html(scanned_ssids);
+}
+
 void server_send_result(byte code, const char* item = NULL) {
   String html = F("{\"result\":");
   html += code;
@@ -1051,6 +1055,7 @@ void do_loop() {
         server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png");
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png");
         server->on("/resetall",on_reset_all);
+        server->on("/test",on_test);
         server->begin();
         DEBUG_PRINTLN(F("Web Server endpoints (STA mode) registered"));
       }
