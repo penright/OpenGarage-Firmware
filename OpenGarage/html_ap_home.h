@@ -6,7 +6,7 @@ const char html_ap_home[] PROGMEM = R"(<body>
 <table cellspacing=16>
 <tr><td><input type='text' name='ssid' id='ssid'></td><td>(SSID)</td></tr>
 <tr><td><input type='password' name='pass' id='pass'></td><td>(Password)</td></tr>
-<tr><td><input type='text' name='auth' id='auth'></td><td>(Auth Token)</td></tr>
+<tr><td><input type='text' name='auth' id='auth'></td><td><label id='lbl_auth'>(Auth Token)</label></td></tr>
 <tr><td colspan=2><p id='msg'></p></td></tr>
 <tr><td><button type='button' id='butt' onclick='sf();' style='height:36px;width:180px'>Submit</button></td><td></td></tr>
 </table>
@@ -48,6 +48,9 @@ id('butt').disabled=true;id('ssid').disabled=true;id('pass').disabled=true;id('a
 }
 
 function loadSSIDs() {
+//Hide auth info to more clearly support multiple tools without breaking app
+id('auth').hidden =true;
+id('lbl_auth').hidden =true;
 var xhr=new XMLHttpRequest();
 xhr.onreadystatechange=function() {
 if(xhr.readyState==4 && xhr.status==200) {
