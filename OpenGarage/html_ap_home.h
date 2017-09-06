@@ -51,15 +51,18 @@ function loadSSIDs() {
 var xhr=new XMLHttpRequest();
 xhr.onreadystatechange=function() {
 if(xhr.readyState==4 && xhr.status==200) {
-var jd=JSON.parse(xhr.responseText), i;
+var jd=JSON.parse(xhr.responseText).sort(function(obj1, obj2) {
+   return obj2.Name < obj1.Name;});
+var i;
 id('rd').deleteRow(0);
-for(i=0;i<jd.ssids.length;i++) {
-var cell=id('rd').insertRow(-1).insertCell(0);
-cell.innerHTML ="<tr><td><input type='radio' name='ssids' id='rd" + i + "' value='" + jd.ssids[i] + "' onclick=sel(" + i + ")>" + jd.ssids[i] + "</td></tr>";
-}
+for(i=0;i<jd.length;i++) {
+    var signalstrength= jd[i].RSSI>-71?'Ok':(jd[i].RSSI>-81?'Weak':'Poor');
+      var row=id('rd').insertRow(-1);
+      row.innerHTML ="<tr><td><input name='ssids' id='rd"+i+"' onclick='sel(" + i + ")' type='radio' value='"+jd[i].Name+"'>" + jd[i].Name + "</td>"  + "<td>"+signalstrength+"</td>" + "<td>("+jd[i].RSSI+" dbm)</td>" + "</tr>";
+  } 
 }
 };
-xhr.open('GET','js',true); xhr.send();
+xhr.open('GET','jsNew',true); xhr.send();
 }
 setTimeout(loadSSIDs, 1000);
 </script>

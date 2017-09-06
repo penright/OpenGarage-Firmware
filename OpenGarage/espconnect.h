@@ -44,7 +44,7 @@
 #include <time.h>
 #include "defines.h"
 
-String scan_network();
+String scan_network(bool NewJSON);
 void start_network_ap(const char *ssid, const char *pass);
 void start_network_sta(const char *ssid, const char *pass);
 void start_network_sta_with_ap(const char *ssid, const char *pass);
