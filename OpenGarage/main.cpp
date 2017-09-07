@@ -478,16 +478,41 @@ void mqtt_callback(const MQTT::Publish& pub) {
   //DEBUG_PRINT(pub.topic());
   //DEBUG_PRINT(" Data: ");
   //DEBUG_PRINTLN(pub.payload_string());
-  if (pub.payload_string() == "Button") { 								//MQTT: If "Button" in topic turn the output on/open the door 
+
+  //Accept button on any topic for backwards compat with existing code - use IN messages below if possible
+  if (pub.payload_string() == "Button") {
+    DEBUG_PRINTLN(F("MQTT Button request received, change door state"));
     if(!og.options[OPTION_ALM].ival) {
       // if alarm is not enabled, trigger relay right away
       og.click_relay();
-      } 
-	else {
+    } 
+	  else {
       // else, set alarm
       og.set_alarm();
+    }
+  }
+  //Accept click for consistency with api, open and close should be used instead, use IN topic if possible
+  if (pub.topic() == og.options[OPTION_NAME].sval +"/IN/STATE" ){
+    DEBUG_PRINT(F("MQTT IN Message detected, check data for action, Data:"));
+    DEBUG_PRINTLN(pub.payload_string());
+    if ( (pub.payload_string() == "close" && door_status) || (pub.payload_string() == "open" && !door_status) || pub.payload_string() == "click") {
+      DEBUG_PRINTLN(F("Command is valid based on existing state, trigger change"));
+      if(!og.options[OPTION_ALM].ival) {
+        // if alarm is not enabled, trigger relay right away
+        og.click_relay();
+      } 
+      else {
+        // else, set alarm
+        og.set_alarm();
       }
-  } 
+    }else if ( (pub.payload_string() == "close" && !door_status) || (pub.payload_string() == "open" && door_status) ){
+      DEBUG_PRINTLN(F("Command request not valid, door already in requested state"));
+    }
+    else {
+      DEBUG_PRINT(F("Unrecognized MQTT data/command:"));
+      DEBUG_PRINTLN(pub.payload_string());
+    }
+  }
 }
 
 void do_setup()
