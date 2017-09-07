@@ -6,18 +6,18 @@ Adds:
 * Support for magnetic or contact based door switch (Installed at bottom or top)
 * Built in automation to close door at a certain time (No external service required)
 * Built in MQTT support - allows adding workflow using things like NodeRed
-* Some updates to main web page 
+* Some updates to main web page (See screenshots)
   * Change button text to reflect the specific action (open or close)
   * Add graphic to home page indicating door status
   * Close or Open state color coded
   * More detail on wireless signal strength
   * Status moved to top, wireless summary moved to front
   * Tweaks to reset AP instructions
-* Log Page updates
+* Log Page updates (See screenshots)
   * Clear log button and related functions added
   * Ordering changed to match mobile app 
   * Graphic added to better match mobile app
-* AP Home Page change
+* AP Home Page change (See screenshots)
   * Wireless signal strength and assesment provided
   * Hide Blynk token field to focus on wireless access only to make Blynk, IFTTT and MQTT procedures match 
 * API Changes
