@@ -34,38 +34,30 @@ const char html_jquery_header[] PROGMEM = "<head><title>OpenGarage</title><meta 
 
 const char html_ap_redirect[] PROGMEM = "<h3>WiFi config saved. Now switching to station mode.</h3>";
 
-String scan_network(bool NewJSON) {
-  //Maintain old format of wireless network JSON for mobile app compat
+String scan_network() {
   DEBUG_PRINTLN(F("scan network"));
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   byte n = WiFi.scanNetworks();
   String ssids;
   if (n>32) n = 32; // limit to 32 ssids max
-  if (NewJSON) {
-    ssids = "["; 
-    for(int i=0;i<n;i++) {
-      ssids += "{";
-      ssids += "\"Name\":\"";
-      ssids += WiFi.SSID(i);
-      ssids += "\",\"RSSI\":";
-      ssids += WiFi.RSSI(i);
-      ssids += "}";
-      if(i<n-1) ssids += ",\r\n";
-    }
-    ssids += "]";
+   //Maintain old format of wireless network JSON for mobile app compat
+  ssids = "{\"ssids\":["; 
+  for(int i=0;i<n;i++) {
+    ssids += "\"";
+    ssids += WiFi.SSID(i);
+    ssids += "\"";
+    if(i<n-1) ssids += ",\r\n";
   }
-  else
-  {
-    ssids = "{\"ssids\":["; 
-    for(int i=0;i<n;i++) {
-      ssids += "\"";
-      ssids += WiFi.SSID(i);
-      ssids += "\"";
-      if(i<n-1) ssids += ",\r\n";
-    }
-    ssids += "]}";
+  ssids += "],";
+  ssids += "\"rssis\":["; 
+  for(int i=0;i<n;i++) {
+    ssids += "\"";
+    ssids += WiFi.RSSI(i);
+    ssids += "\"";
+    if(i<n-1) ssids += ",\r\n";
   }
+  ssids += "]}";
   return ssids;
 }
 

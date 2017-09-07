@@ -41,7 +41,6 @@ PubSubClient mqttclient(wificlient);
 
 
 static String scanned_ssids;
-static String scanned_ssids_new; //Enhanced Format with strength, sort, etc.
 static byte read_cnt = 0;
 static uint distance = 0;
 static byte door_status = 0;
@@ -434,11 +433,7 @@ void on_sta_options() {
 
 void on_ap_scan() {
   if(curr_mode == OG_MOD_STA) return;
-  String request = server->uri();
-  if (request == "/jsNew"){
-    server_send_html(scanned_ssids_new);}
-  else{
-    server_send_html(scanned_ssids);}
+  server_send_html(scanned_ssids);
 }
 
 void on_ap_change_config() {
@@ -997,8 +992,7 @@ void do_loop() {
   switch(og.state) {
   case OG_STATE_INITIAL:
     if(curr_mode == OG_MOD_AP) {
-      scanned_ssids = scan_network(false);
-      scanned_ssids_new = scan_network(true);
+      scanned_ssids = scan_network();
       String ap_ssid = get_ap_ssid();
       start_network_ap(ap_ssid.c_str(), NULL);
       server->on("/",   on_home);    

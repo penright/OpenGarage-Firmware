@@ -1,6 +1,7 @@
 const char html_ap_home[] PROGMEM = R"(<body>
 <caption><b>OpenGarage WiFi Config</caption><br><br>
 <table cellspacing=4 id='rd'>
+<tr><td>SSID</td><td>Strength</td><td>Power Level</td></tr>
 <tr><td>(Scanning...)</td></tr>
 </table>
 <table cellspacing=16>
@@ -48,25 +49,25 @@ id('butt').disabled=true;id('ssid').disabled=true;id('pass').disabled=true;id('a
 }
 
 function loadSSIDs() {
-//Hide auth info to more clearly support multiple tools without breaking app
-id('auth').hidden =true;
-id('lbl_auth').hidden =true;
-var xhr=new XMLHttpRequest();
-xhr.onreadystatechange=function() {
-if(xhr.readyState==4 && xhr.status==200) {
-var jd=JSON.parse(xhr.responseText).sort(function(obj1, obj2) {
-   return obj2.Name < obj1.Name;});
-var i;
-id('rd').deleteRow(0);
-for(i=0;i<jd.length;i++) {
-    var signalstrength= jd[i].RSSI>-71?'Ok':(jd[i].RSSI>-81?'Weak':'Poor');
-      var row=id('rd').insertRow(-1);
-      row.innerHTML ="<tr><td><input name='ssids' id='rd"+i+"' onclick='sel(" + i + ")' type='radio' value='"+jd[i].Name+"'>" + jd[i].Name + "</td>"  + "<td>"+signalstrength+"</td>" + "<td>("+jd[i].RSSI+" dbm)</td>" + "</tr>";
-  } 
-}
-};
-xhr.open('GET','jsNew',true); xhr.send();
-}
-setTimeout(loadSSIDs, 1000);
+  //Hide auth info to more clearly support multiple tools without breaking app
+  id('auth').hidden =true;
+  id('lbl_auth').hidden =true;
+  var xhr=new XMLHttpRequest();
+  xhr.onreadystatechange=function() {
+    if(xhr.readyState==4 && xhr.status==200) {
+      id('rd').deleteRow(1);
+      var i;
+      var jd=JSON.parse(xhr.responseText);
+      //TODO Sort and remove dups
+      for(i=0;i<jd.ssids.length;i++) {
+        var signalstrength= jd.rssis[i]>-71?'Ok':(jd.rssis[i]>-81?'Weak':'Poor');
+        var row=id('rd').insertRow(-1);
+        row.innerHTML ="<tr><td><input name='ssids' id='rd"+i+"' onclick='sel(" + i + ")' type='radio' value='"+jd.ssids[i]+"'>" + jd.ssids[i] + "</td>"  + "<td align='center'>"+signalstrength+"</td>" + "<td align='center'>("+jd.rssis[i] +" dbm)</td>" + "</tr>";
+      }
+    }
+  };
+  xhr.open('GET','js',true); xhr.send();
+  }
+  setTimeout(loadSSIDs, 1000);
 </script>
 </body>)";
