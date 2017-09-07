@@ -1030,7 +1030,6 @@ void do_loop() {
       start_network_ap(ap_ssid.c_str(), NULL);
       server->on("/",   on_home);    
       server->on("/js", on_ap_scan);
-      server->on("/jsNew", on_ap_scan);
       server->on("/cc", on_ap_change_config);
       server->on("/jt", on_ap_try_connect);
       server->on("/resetall",on_reset_all);
