@@ -12,13 +12,17 @@ Adds:
   * Close or Open state color coded
   * More detail on wireless signal strength
   * Status moved to top, wireless summary moved to front
+  * Tweaks to reset AP instructions
 * Log Page updates
   * Clear log button and related functions added
   * Ordering changed to match mobile app 
   * Graphic added to better match mobile app
+* AP Home Page change
+  * Wireless signal strength and assesment provided
+  * Hide Blynk token field to focus on wireless access only to make Blynk, IFTTT and MQTT procedures match 
 * API Changes
-  * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity 
-  without worrying or first querying if the door is actually open and vice versa)
+  * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity without worrying or first querying if the door is actually open and vice versa)
+  - This is supported via HTTP and MQTT
   * Ability to tell free heap
   * Ability to tell compile date/time 
   * Clear Logs function added
@@ -32,6 +36,7 @@ Issues Fixed:
 * WDT Resets if ultrasonic sensor not connected
 * Save of SSID/Password failure in certain circumstances
 * Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
+* Don't register state change on boot if the door is open
 
 
 Notes specific to this fork:
