@@ -60,7 +60,7 @@ $.getJSON(comm, function(jd) {
 if(jd.result!=1) show_msg('Check device key and try again.',2000,'red');
 else {
 clearInterval(si);
-$('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then open a<br>browser, type in <a href="http://192.168.4.1">http://192.168.4.1</a><br>and continue there.').css('color','green');
+$('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then <br> click <a href="http://192.168.4.1">http://192.168.4.1</a><br>to configure.').css('color','green');
 }
 });
 }
