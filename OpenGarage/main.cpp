@@ -779,8 +779,8 @@ void perform_automation(byte event) {
 
 void check_status() {
   static ulong checkstatus_timeout = 0;
-  static ulong checkstatus_report_timeout = 0;
-  if(curr_utc_time > checkstatus_timeout) {
+  static ulong checkstatus_report_timeout = 0; 
+  if((curr_utc_time > checkstatus_timeout) || (checkstatus_timeout == 0))  { //also check on first boot
     og.set_led(HIGH);
     uint threshold = og.options[OPTION_DTH].ival;
     if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
@@ -814,7 +814,15 @@ void check_status() {
     }
     og.set_led(LOW);
     read_cnt = (read_cnt+1)%100;
-    door_status_hist = (door_status_hist<<1) | door_status;
+    if (checkstatus_timeout == 0){
+      DEBUG_PRINTLN(F("First time checking status don't trigger a status change, set full history to current value"));
+      if (door_status) { door_status_hist = B11111111; }
+      else { door_status_hist = B00000000; }
+    }else{
+       door_status_hist = (door_status_hist<<1) | door_status;
+    }
+    //DEBUG_PRINT(F("Histogram value:"));
+    //DEBUG_PRINTLN(door_status_hist);
     byte event = check_door_status_hist();
 
     //Upon change
@@ -936,7 +944,7 @@ void time_keeping() {
   static ulong time_keeping_timeout = 0;
 
   if(!configured) {
-    DEBUG_PRINTLN(F("set time server"));
+    DEBUG_PRINTLN(F("Set time server"));
     configTime(0, 0, "pool.ntp.org", "time.nist.org", NULL);
     configured = true;
   }
