@@ -90,5 +90,6 @@ $('#btn_click').html(jd.door?'Close Door':'Open Door').button('refresh');
 $('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));
 });
 }
+//TODO Display error if distance has overflowed (450)
 </script>
 </body>)";
