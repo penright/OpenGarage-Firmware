@@ -29,8 +29,8 @@
 /** GPIO pins */
 #define PIN_RELAY  15 //D8
 #define PIN_BUTTON  0
-#define PIN_TRIG   12
-#define PIN_ECHO   14
+#define PIN_TRIG   12 //D6
+#define PIN_ECHO   14 //D5
 #define PIN_LED     2
 #define PIN_RESET  16
 #define PIN_BUZZER 13
