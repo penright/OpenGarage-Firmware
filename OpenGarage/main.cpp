@@ -1080,8 +1080,8 @@ void do_loop() {
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
         server->on("/clearlog", on_clear_log);
-        server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png");
-        server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png");
+        server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png","max-age=86400");
+        server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png","max-age=86400");
         server->on("/resetall",on_reset_all);
         server->on("/test",on_test);
         server->begin();
