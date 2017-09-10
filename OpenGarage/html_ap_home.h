@@ -1,9 +1,13 @@
 const char html_ap_home[] PROGMEM = R"(<body>
+<style> table, th, td {	border: 0px solid black;  border-collapse: collapse;}
+table#rd th { border: 1px solid black;}
+table#rd td {	border: 1px solid black; border-collapse: collapse;}</style>
 <caption><b>OpenGarage WiFi Config</caption><br><br>
 <table cellspacing=4 id='rd'>
 <tr><td>SSID</td><td>Strength</td><td>Power Level</td></tr>
 <tr><td>(Scanning...)</td></tr>
 </table>
+<br><br>
 <table cellspacing=16>
 <tr><td><input type='text' name='ssid' id='ssid'></td><td>(SSID)</td></tr>
 <tr><td><input type='password' name='pass' id='pass'></td><td>(Password)</td></tr>
