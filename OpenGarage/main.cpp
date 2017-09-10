@@ -198,7 +198,28 @@ void on_sta_controller() {
   html += ESP.getChipId();
   html += F(",\"rssi\":");
   html += (int16_t)WiFi.RSSI();
-  html += F(",\"build\":\"");
+  html += F("}");
+  server_send_html(html);
+}
+
+void on_sta_debug() {
+  String html = "";
+  html += F("{");
+  html += F("\"rcnt\":");
+  html += read_cnt;
+  html += F(",\"fwv\":");
+  html += og.options[OPTION_FWV].ival;
+  html += F(",\"name\":\"");
+  html += og.options[OPTION_NAME].sval;
+  html += F("\",\"mac\":\"");
+  html += get_mac();
+  html += F("\",\"cid\":");
+  html += ESP.getChipId();
+  html += F(",\"rssi\":");
+  html += (int16_t)WiFi.RSSI();
+  html += F(",\"bssid\":\"");
+  html += WiFi.BSSIDstr();
+  html += F("\",\"build\":\"");
   html += (F(__DATE__));
   html += F("\",\"Freeheap\":");
   html += (int16_t)ESP.getFreeHeap();
@@ -1077,6 +1098,7 @@ void do_loop() {
         server->on("/vl", on_sta_view_logs);
         server->on("/cc", on_sta_change_controller);
         server->on("/co", on_sta_change_options);
+        server->on("/db", on_sta_debug);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
         server->on("/clearlog", on_clear_log);
