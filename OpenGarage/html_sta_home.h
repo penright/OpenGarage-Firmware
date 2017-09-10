@@ -80,7 +80,7 @@ $('#btn_click').click(function(e) {
       });
     });
 $(document).ready(function() {
-show(); si=setInterval('show()', 3000);
+show(); si=setInterval('show()', 5000);
 });
 function show() {
 $.getJSON('jc', function(jd) {
