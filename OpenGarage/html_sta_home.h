@@ -66,14 +66,19 @@ $('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then <br>
 }
 });  
 $('#btn_click').click(function(e) {
-var comm = 'cc?click=1&dkey='+($('#dkey').val());
-clear_msg();
-$.getJSON(comm, function(jd) {
-if(jd.result!=1) {
-show_msg('Check device key and try again.',2000,'red');
-}
-});
-});
+    show_msg('Sending command to OpenGarage..',5000,'green');
+    var comm = 'cc?click=1&dkey='+($('#dkey').val());
+    $.getJSON(comm)
+      .done(function( jd ) {
+        if(jd.result!=1) {
+          show_msg('Check device key and try again.',2000,'red');
+        }else{clear_msg();};
+      })
+      .fail(function( jqxhr, textStatus, error ) {
+        var err = error;
+        $('#msg').text('Request Failed: ' + err).css('color','red');
+      });
+    });
 $(document).ready(function() {
 show(); si=setInterval('show()', 3000);
 });
