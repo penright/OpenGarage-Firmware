@@ -29,6 +29,7 @@
 #include "espconnect.h"
 #include <BlynkSimpleEsp8266.h>
 #include <PubSubClient.h> //https://github.com/Imroy/pubsubclient
+//Change Timeout to 25 in header file
 
 OpenGarage og;
 ESP8266WebServer *server = NULL;
@@ -708,14 +709,17 @@ bool mqtt_connect_subscibe() {
 }
 
 void perform_notify(String s) {
+  DEBUG_PRINT(F("Sending Notify to connected systems, value:"));
+  DEBUG_PRINTLN(s);
   // Blynk notification
   if(curr_cloud_access_en && Blynk.connected()) {
+    DEBUG_PRINTLN(F(" Blynk Notify"));
     Blynk.notify(s);
   }
 
   // IFTTT notification
   if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
-    DEBUG_PRINTLN("Sending IFTTT Notification");
+    DEBUG_PRINTLN(" Sending IFTTT Notification");
     http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
     http.addHeader("Content-Type", "application/json");
     http.POST("{\"value1\":\""+s+"\"}");
@@ -732,7 +736,7 @@ void perform_notify(String s) {
   //Mqtt notification
   if(og.options[OPTION_MQTT].sval.length()>8) {
     if (mqttclient.connected()) {
-        DEBUG_PRINTLN("Sending MQTT Notification");
+        DEBUG_PRINTLN(" Sending MQTT Notification");
         mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
     }
   }
@@ -742,15 +746,16 @@ void perform_automation(byte event) {
   static bool automationclose_triggered=false;
   byte ato = og.options[OPTION_ATO].ival;
   byte atob = og.options[OPTION_ATOB].ival;
-  if(!ato&&!atob) {
+  byte atoc = og.options[OPTION_ATOC].ival;
+  if(!ato && !atob && !atoc) {
     justopen_timestamp = 0;
     return;
   }
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
-    //This alert seems unlreated to close door if open at time X - moving to other area
-    //perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
-
+    if (atoc & 1)
+      { perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");}
+    
     //If the door is set to auto close at a certain hour, ensure if manually opened it doesn't autoshut
     if( (curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered) ){
       DEBUG_PRINTLN(" Door opened during automation hour, set to not auto-close ");
@@ -759,8 +764,9 @@ void perform_automation(byte event) {
 
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
-    //This alert seems unlreated to close door if open at time X - moving to other area
-    //perform_notify(og.options[OPTION_NAME].sval + " just closed!");
+    if (atoc & 1)
+      { perform_notify(og.options[OPTION_NAME].sval + " just closed!");}
+
   } else if (event == DOOR_STATUS_REMAIN_OPEN) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
     else {
@@ -975,7 +981,7 @@ void check_status() {
       
       //IFTTT only recieves state change events not ongoing status
 
-      //Mqtt notification
+      //Mqtt update
       if((og.options[OPTION_MQTT].sval.length()>8) && (mqttclient.connected())) {
         DEBUG_PRINTLN(F(" Update MQTT (State Refresh)"));
         if(door_status == DOOR_STATUS_REMAIN_OPEN)  {						// MQTT: If door open...

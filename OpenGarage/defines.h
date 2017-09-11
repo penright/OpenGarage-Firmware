@@ -105,6 +105,7 @@ typedef enum {
   OPTION_ATO,     // automation options
   OPTION_ATIB,     // automation interval B (in hours)
   OPTION_ATOB,     // automation options B
+  OPTION_ATOC,     // automation options C
   OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password
