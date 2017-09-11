@@ -123,7 +123,8 @@ void on_sta_view_options() {
   if(curr_mode == OG_MOD_AP) return;
   String html = FPSTR(html_jquery_header);
   html += FPSTR(html_sta_options);
-  server_send_html(html);
+  server->send(200, "text/html", html);
+  DEBUG_PRINTLN(F("Complete sending page"));
 }
 
 void on_sta_view_logs() {
@@ -841,7 +842,7 @@ void check_status() {
     if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
       //sensor is ultrasonic
       distance = og.read_distance();
-      door_status = (distance>threshold)?0:1;
+      door_status = (distance>threshold)?0:1; 
       if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
        door_status = 1-door_status; } // reverse logic for side mount
       else {
@@ -1115,6 +1116,7 @@ void do_loop() {
         server->on("/jo", on_sta_options);
         server->on("/jl", on_sta_logs);
         server->on("/vo", on_sta_view_options);
+        server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
         server->on("/vl", on_sta_view_logs);
         server->on("/cc", on_sta_change_controller);
         server->on("/co", on_sta_change_options);

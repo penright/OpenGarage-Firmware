@@ -6,26 +6,33 @@ Adds:
 * Support for magnetic or contact based door switch (Installed at bottom or top)
 * Built in automation to close door at a certain time (No external service required)
 * Built in MQTT support - allows adding workflow using things like NodeRed
-* Some updates to main web page (See screenshots)
+* Support for reading/reporting vehicle occupancy status (when door is closed at least)
+* Some updates to main integrated web page (not app) (See screenshots)
   * Change button text to reflect the specific action (open or close)
-  * Add graphic to home page indicating door status
+  * Text displays Sending command when you click the button so you can tell it does something
+  * Add graphic to home page indicating door status (and/or vehicle occupancy status)
+  * Add text displaying vehicle occupancy status (if known)
   * Close or Open state color coded
   * More detail on wireless signal strength
   * Status moved to top, wireless summary moved to front
   * Tweaks to reset AP instructions
+  * If the senor reports out of range value (changed to 450cm) it displays in red
 * Log Page updates (See screenshots)
   * Clear log button and related functions added
   * Ordering changed to match mobile app 
   * Graphic added to better match mobile app
 * AP Home Page change (See screenshots)
-  * Wireless signal strength and assesment provided
+  * Wireless signal strength and assesment provided in table
   * Hide Blynk token field to focus on wireless access only to make Blynk, IFTTT and MQTT procedures match 
+* Option page changes
+  * Support for added functions - like magnetic switch sensor type and close at certain time
+  * Support for vehicle detection threshold
+  * Support for seperately enabling open/close change notifications 
+  * Vehicle change notification option added - but not yet wired in
 * API Changes
   * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity without worrying or first querying if the door is actually open and vice versa)
   - This is supported via HTTP and MQTT
-  * Ability to tell free heap
-  * Ability to tell compile date/time 
-  * Clear Logs function added
+    * Debug page added - this displays extra details like BSSID, free memory, compile time - its JSON only at this point - no corresponding user page
   * Reset all function added - for users without a reset button installed
 * Debug improvements - Added tons of serial debug commands, if you get nothing else out of this verbose logging is now included
 * Tons of little usability changes - Quick beeps on status changes as an example
@@ -34,6 +41,7 @@ Adds:
 Issues Fixed:
 =======
 * WDT Resets if ultrasonic sensor not connected
+* Blynk open/close notifications are no longer tied to close in X minutes automation
 * Save of SSID/Password failure in certain circumstances
 * Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
 * Don't register state change on boot if the door is open
