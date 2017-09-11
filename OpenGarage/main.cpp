@@ -39,11 +39,11 @@ WidgetLCD blynk_lcd(BLYNK_PIN_LCD);
 static WiFiClient wificlient;
 PubSubClient mqttclient(wificlient);
 
-
 static String scanned_ssids;
 static byte read_cnt = 0;
 static uint distance = 0;
-static byte door_status = 0;
+static byte door_status = 0; //0 down, 1 up
+static int vehicle_status = 0; //0 No, 1 Yes, 2 Unknown (door open), 3 Option Disabled
 static bool curr_cloud_access_en = false;
 static bool curr_local_access_en = false;
 static uint led_blink_ms = LED_FAST_BLINK;
@@ -186,6 +186,8 @@ void on_sta_controller() {
   html += distance;
   html += F(",\"door\":");
   html += door_status;
+  html += F(",\"vehicle\":");
+  html += vehicle_status;
   html += F(",\"rcnt\":");
   html += read_cnt;
   html += F(",\"fwv\":");
@@ -829,13 +831,22 @@ void check_status() {
   if((curr_utc_time > checkstatus_timeout) || (checkstatus_timeout == 0))  { //also check on first boot
     og.set_led(HIGH);
     uint threshold = og.options[OPTION_DTH].ival;
+    uint vthreshold = og.options[OPTION_VTH].ival;
     if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
       //sensor is ultrasonic
       distance = og.read_distance();
       door_status = (distance>threshold)?0:1;
       if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
        door_status = 1-door_status; } // reverse logic for side mount
+      else {
+        if (vthreshold == 0 ) //if disabled via threshold setting set to disable flag (3)
+          { vehicle_status = 3;}
+        else if ((!door_status) && (distance != 450)){ //This only works if door is closed (otherwise it blocks)
+          vehicle_status = ((distance>threshold) && (distance <=vthreshold))?1:0;
+        }else {vehicle_status = 2;}
+      }
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
+      vehicle_status= 3;
       if (og.get_switch() == LOW){
         //DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
         door_status =0; 
@@ -847,6 +858,7 @@ void check_status() {
         distance = threshold - 20;
       }
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_HIGH){
+      vehicle_status= 3;
       if (og.get_switch() == LOW){
         //DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
         door_status =1; 
@@ -869,6 +881,8 @@ void check_status() {
     }
     //DEBUG_PRINT(F("Histogram value:"));
     //DEBUG_PRINTLN(door_status_hist);
+    //DEBUG_PRINT(F("Vehicle Status:"));
+    //DEBUG_PRINTLN(vehicle_status);
     byte event = check_door_status_hist();
 
     //Upon change
@@ -1104,6 +1118,9 @@ void do_loop() {
         server->on("/clearlog", on_clear_log);
         server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png","max-age=86400");
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png","max-age=86400");
+        server->serveStatic("/ClosedAbsent.png", SPIFFS, "/ClosedAbsent.png","max-age=86400");
+        server->serveStatic("/ClosedPresent.png", SPIFFS, "/ClosedPresent.png","max-age=86400");
+        server->serveStatic("/Open.png", SPIFFS, "/Open.png","max-age=86400");
         server->on("/resetall",on_reset_all);
         server->on("/test",on_test);
         server->begin();

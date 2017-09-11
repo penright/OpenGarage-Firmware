@@ -94,7 +94,8 @@ typedef enum {
   OPTION_FWV = 0, // firmware version
   OPTION_ACC,     // accessbility
   OPTION_MNT,     // mount type
-  OPTION_DTH,     // distance threshold
+  OPTION_DTH,     // distance threshold door
+  OPTION_VTH,     // distance threshold vehicle detection
   OPTION_RIV,     // read interval
   OPTION_ALM,     // alarm mode
   OPTION_HTP,     // http port

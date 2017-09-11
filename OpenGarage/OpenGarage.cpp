@@ -39,6 +39,7 @@ OptionStruct OpenGarage::options[] = {
   {"acc", OG_ACC_LOCAL,  2, ""},
   {"mnt", OG_MNT_CEILING,3, ""},
   {"dth", 50,        65535, ""},
+  {"vth", 150,       65535, ""},
   {"riv", 5,           300, ""},
   {"alm", OG_ALM_5,      2, ""},
   {"htp", 80,        65535, ""},
