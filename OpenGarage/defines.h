@@ -65,6 +65,14 @@
 #define OG_AUTO_NOTIFY  0x01
 #define OG_AUTO_CLOSE   0x02
 
+//Automation Option C - Notify settings
+#define OG_NOTIFY_NONE  0x00
+#define OG_NOTIFY_DO    0x01
+#define OG_NOTIFY_DC    0x02
+#define OG_NOTIFY_VL    0x03
+#define OG_NOTIFY_VA    0x04
+
+
 #define OG_STATE_INITIAL        0
 #define OG_STATE_CONNECTING     1
 #define OG_STATE_CONNECTED      2

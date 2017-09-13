@@ -754,7 +754,7 @@ void perform_automation(byte event) {
   }
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
-    if (atoc & 1)
+    if (atoc & OG_NOTIFY_DO)
       { perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");}
     
     //If the door is set to auto close at a certain hour, ensure if manually opened it doesn't autoshut
@@ -765,8 +765,8 @@ void perform_automation(byte event) {
 
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
-    if (atoc & 1)
-      { perform_notify(og.options[OPTION_NAME].sval + " just closed!");}
+    if (atoc & OG_NOTIFY_DC)
+      { perform_notify(og.options[OPTION_NAME].sval + " just CLOSED!");}
 
   } else if (event == DOOR_STATUS_REMAIN_OPEN) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
