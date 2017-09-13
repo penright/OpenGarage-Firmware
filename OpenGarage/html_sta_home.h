@@ -1,18 +1,17 @@
 const char html_sta_home[] PROGMEM = R"(<body>
-<div data-role='page' id='page_home'>
-<div data-role='header'><h3 id='head_name'>OG</h3></div>
-<div data-role='content'>
-<div data-role='fieldcontain'>
-<table cellpadding='4'>
-<tr><td><b>Door State:</b></td><td><label id='lbl_status'>-</label></td>
-<td><img id='pic' src='' style='width:80px;height:60px;'></td></tr>
-<tr><td><b>Distance:</b></td><td><label id='lbl_dist'>-</label></td></tr>
-<tr><td><b>Read&nbsp;Count:</b></td><td><label id='lbl_beat'>-</label></td></tr>
-<tr><td><b>WiFi&nbsp;Signal:</b></td><td><label id='lbl_rssi'>-</label></td></tr>
-<tr><td><b>Device&nbsp;Key:</b></td><td><input type='password' size=16 maxlength=32 name='dkey' id='dkey'></td></tr>
-<tr><td colspan=2><label id='msg'></label></td></tr>
-</table>
-<br />
+  <style> table, th, td {border: 0px solid black;padding: 6px; border-collapse: collapse; }</style>
+  <div data-role='page' id='page_home'><div data-role='header'><h3 id='head_name'>OG</h3></div>
+  <div data-role='content'><div data-role='fieldcontain'>
+  <table><tr><td><b>Door&nbsp;State:<br></td><td><label id='lbl_status'>-</label></td>
+  <td rowspan="2"><img id='pic' src='' style='width:112px;height:64px;'></td>
+  </tr><tr><td><b><label id='lbl_vstatus1'>Vehicle&nbsp;State:&nbsp</label></b></td>
+  <td><label id='lbl_vstatus'>-</label></td></tr>
+   <tr><td><b>Distance:</b></td><td><label id='lbl_dist'>-</label></td><td></td></tr>
+  <tr><td><b>Read&nbsp;Count:</b></td><td><label id='lbl_beat'>-</label></td><td></td></tr>
+  <tr><td><b>WiFi&nbsp;Signal:</b></td><td colspan="2"><label id='lbl_rssi'>-</label></td></tr>
+  <tr><td><b>Device&nbsp;Key:</b></td><td colspan="2" ><input type='password' size=20 maxlength=32 name='dkey' id='dkey'></td></tr>
+  <tr><td colspan=3><label id='msg'></label></td></tr>
+  </table><br />
 <div data-role='controlgroup' data-type='horizontal'>
 <button data-theme='b' id='btn_click'>Button</button>  
 <button data-theme='b' id='btn_opts'>Options</button>
@@ -26,7 +25,7 @@ const char html_sta_home[] PROGMEM = R"(<body>
 </div>
 </div>
 <div data-role='footer' data-theme='c'>
-<p>&nbsp; OpenGarage Firmware <label id='fwv'>-</label>&nbsp;<label id='fwct'>-</label>&nbsp;<a href='update' target='_top' data-role='button' data-inline=true data-mini=true>Update</a></p>
+<p>&nbsp; OpenGarage Firmware <label id='fwv'>-</label>&nbsp;<a href='update' target='_top' data-role='button' data-inline=true data-mini=true>Update</a></p>
 </div>
 </div>
 <script>
@@ -60,35 +59,52 @@ $.getJSON(comm, function(jd) {
 if(jd.result!=1) show_msg('Check device key and try again.',2000,'red');
 else {
 clearInterval(si);
-$('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then open a<br>browser, type in <a href="http://192.168.4.1">http://192.168.4.1</a><br>and continue there.').css('color','green');
+$('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then <br> open or click <a href="http://192.168.4.1">http://192.168.4.1</a><br>to configure.').css('color','green');
 }
 });
 }
 });  
 $('#btn_click').click(function(e) {
-var comm = 'cc?click=1&dkey='+($('#dkey').val());
-clear_msg();
-$.getJSON(comm, function(jd) {
-if(jd.result!=1) {
-show_msg('Check device key and try again.',2000,'red');
-}
-});
-});
+    show_msg('Sending command.....',5000,'green');
+    var comm = 'cc?click=1&dkey='+($('#dkey').val());
+    $.getJSON(comm)
+      .done(function( jd ) {
+        if(jd.result!=1) {
+          show_msg('Check device key and try again.',2000,'red');
+        }else{clear_msg();};
+      })
+      .fail(function( jqxhr, textStatus, error ) {
+        var err = error;
+        $('#msg').text('Request Failed: ' + err).css('color','red');
+      });
+    });
 $(document).ready(function() {
-show(); si=setInterval('show()', 3000);
+show(); si=setInterval('show()', 5000);
 });
 function show() {
-$.getJSON('jc', function(jd) {
-$('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
-$('#fwct').text('(' + jd.build + ')');
-$('#lbl_dist').text(''+jd.dist+' (cm)');
-$('#lbl_status').text(jd.door?'OPEN':'CLOSED').css('color', jd.door?'red':'green');
-$('#lbl_beat').text(jd.rcnt);
-$('#lbl_rssi').text(jd.rssi+' dBm ('+(jd.rssi>-71?'Ok':(jd.rssi>-81?'Weak':'Poor'))+')');
-$('#head_name').text(jd.name);
-$('#btn_click').html(jd.door?'Close Door':'Open Door').button('refresh');
-$('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));
-});
-}
+  $.getJSON('jc', function(jd) {
+  $('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
+  $('#lbl_dist').text(jd.dist +' (cm)').css('color', jd.dist==450?'red':'black');
+  $('#lbl_status').text(jd.door?'OPEN':'CLOSED').css('color',jd.door?'red':'green'); 
+  //Hide or Show vehicle info
+  if (jd.vehicle >=2){
+    $('#lbl_vstatus1').hide();
+    $('#lbl_vstatus').text('');
+  }else {
+    $('#lbl_vstatus1').show()
+    $('#lbl_vstatus').text(jd.vehicle & !jd.door?'Present':(!jd.vehicle & !jd.door?'Absent':''));
+  }
+  //Use correct graphics
+  if (jd.vehicle>=3){ //3 is disabled
+    $('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));
+  }else{
+    $('#pic').attr('src', jd.door?'/Open.png':(jd.vehicle?'/ClosedPresent.png':'/ClosedAbsent.png'));
+  }
+  $('#lbl_beat').text(jd.rcnt);
+  $('#lbl_rssi').text((jd.rssi>-71?'Good':(jd.rssi>-81?'Weak':'Poor')) +' ('+ jd.rssi +' dBm)');
+  $('#head_name').text(jd.name);
+  $('#btn_click').html(jd.door?'Close Door':'Open Door').button('refresh');
+  });
+  }
 </script>
 </body>)";

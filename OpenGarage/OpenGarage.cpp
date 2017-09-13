@@ -39,7 +39,8 @@ OptionStruct OpenGarage::options[] = {
   {"acc", OG_ACC_LOCAL,  2, ""},
   {"mnt", OG_MNT_CEILING,3, ""},
   {"dth", 50,        65535, ""},
-  {"riv", 4,           300, ""},
+  {"vth", 150,       65535, ""},
+  {"riv", 5,           300, ""},
   {"alm", OG_ALM_5,      2, ""},
   {"htp", 80,        65535, ""},
   {"cdt", 1000,       5000, ""},
@@ -48,6 +49,7 @@ OptionStruct OpenGarage::options[] = {
   {"ato", OG_AUTO_NONE,255, ""},
   {"atib", 3,          24, ""},
   {"atob", OG_AUTO_NONE,255, ""},
+  {"atoc", OG_AUTO_NONE,255, ""},
   {"usi", 0,             1, ""},
   {"ssid", 0, 0, ""},  // string options have 0 max value
   {"pass", 0, 0, ""},
@@ -184,21 +186,25 @@ void OpenGarage::options_save() {
 }
 
 ulong OpenGarage::read_distance_once() {
+  //TODO handle max value as handled error in the UI - check long distance for car detection
   digitalWrite(PIN_TRIG, LOW);
   delayMicroseconds(2);
   digitalWrite(PIN_TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(PIN_TRIG, LOW);
   // wait till echo pin's rising edge
-  unsigned long quit_time=micros()+32767L;
+  unsigned long quit_time=micros()+26233L;
   while((digitalRead(PIN_ECHO)==LOW)&& (micros()<quit_time));
-  //Do nothing
+  {//Do nothing
+  };
   unsigned long start_time = micros();
-  quit_time=start_time+32767L;
+  quit_time=start_time+26233L;
   //wait till echo pin's falling edge
   while((digitalRead(PIN_ECHO)==HIGH) && (micros()<quit_time));
   ulong lapse = micros() - start_time;
-  if (lapse>32767L) lapse = 32767L;
+  if (lapse>26233L) lapse = 26233L;
+  //DEBUG_PRINTLN(F("Distance issue, setting to low value"));
+  //DEBUG_PRINT(lapse);
   return lapse;
 }
 

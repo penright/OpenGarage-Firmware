@@ -39,16 +39,26 @@ String scan_network() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   byte n = WiFi.scanNetworks();
+  String wirelessinfo;
   if (n>32) n = 32; // limit to 32 ssids max
-  String ssids = "{\"ssids\":["; 
+   //Maintain old format of wireless network JSON for mobile app compat
+   wirelessinfo = "{\"ssids\":["; 
   for(int i=0;i<n;i++) {
-    ssids += "\"";
-    ssids += WiFi.SSID(i);
-    ssids += "\"";
-    if(i<n-1) ssids += ",\r\n";
+    wirelessinfo += "\"";
+    wirelessinfo += WiFi.SSID(i);
+    wirelessinfo += "\"";
+    if(i<n-1) wirelessinfo += ",\r\n";
   }
-  ssids += "]}";
-  return ssids;
+  wirelessinfo += "],";
+  wirelessinfo += "\"rssis\":["; 
+  for(int i=0;i<n;i++) {
+    wirelessinfo += "\"";
+    wirelessinfo += WiFi.RSSI(i);
+    wirelessinfo += "\"";
+    if(i<n-1) wirelessinfo += ",\r\n";
+  }
+  wirelessinfo += "]}";
+  return wirelessinfo;
 }
 
 void start_network_ap(const char *ssid, const char *pass) {
