@@ -7,11 +7,13 @@ Adds:
 * Built in automation to close door at a certain time (No external service required)
 * Built in MQTT support - allows adding workflow using things like NodeRed
 * Support for reading/reporting vehicle occupancy status (when door is closed at least)
+* Seperate Notification Options for Notify on vehicle open and close (not tied to automation option anymore)
 * Some updates to main integrated web page (not app) (See screenshots)
   * Change button text to reflect the specific action (open or close)
   * Text displays Sending command when you click the button so you can tell it does something
   * Add graphic to home page indicating door status (and/or vehicle occupancy status)
-  * Add text displaying vehicle occupancy status (if known)
+    * If vehicle detection is disabled a generic closed/open graphic is shown
+  * Add text displaying vehicle occupancy status (if known and enabled)
   * Close or Open state color coded
   * More detail on wireless signal strength
   * Status moved to top, wireless summary moved to front
@@ -25,9 +27,10 @@ Adds:
   * Wireless signal strength and assesment provided in table
   * Hide Blynk token field to focus on wireless access only to make Blynk, IFTTT and MQTT procedures match 
 * Option page changes
-  * Support for added functions - like magnetic switch sensor type and close at certain time
+  * Support for switch/magnetic sensor type
+  * Added support for close at a certain time
   * Support for vehicle detection threshold
-  * Support for seperately enabling open/close change notifications 
+  * Support for seperately enabling open/close change notifications by type (Door Open seperate from Door close for example)
   * Vehicle change notification option added - but not yet wired in
 * API Changes
   * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity without worrying or first querying if the door is actually open and vice versa)
@@ -44,7 +47,7 @@ Issues Fixed:
 * Blynk open/close notifications are no longer tied to close in X minutes automation
 * Save of SSID/Password failure in certain circumstances
 * Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
-* Don't register state change on boot if the door is open
+* Don't register state change on boot if the door is open.. i.e. initialize starting history to match starting state
 
 
 Notes specific to this fork:
