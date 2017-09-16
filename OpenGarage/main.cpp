@@ -221,6 +221,8 @@ void on_sta_debug() {
   html += ESP.getChipId();
   html += F(",\"rssi\":");
   html += (int16_t)WiFi.RSSI();
+  html += F(",\"FreeSketchSpace\":");
+  html += ESP.getFreeSketchSpace();
   html += F(",\"bssid\":\"");
   html += WiFi.BSSIDstr();
   html += F("\",\"build\":\"");
@@ -919,16 +921,8 @@ void check_status() {
       og.write_log(l);
       
       // Blynk notification
-      byte ato = og.options[OPTION_ATO].ival;
-      if(curr_cloud_access_en && Blynk.connected() && ato) {
-        //The official firmware only sends these notifications on ato enabled (which seems a somewhat unrelated function)
-        //Maintain backwards compat and use same logic
-        DEBUG_PRINTLN(F(" Notify Blynk with text notification"));
-        if(event == DOOR_STATUS_JUST_OPENED)  {	
-          Blynk.notify(og.options[OPTION_NAME].sval + " just opened!");}
-        else if(event == DOOR_STATUS_JUST_CLOSED) {	
-          Blynk.notify(og.options[OPTION_NAME].sval + " just closed!");}
-      }
+      //Blynk update is made every check so no need for anything special here
+      //Blynk notifications are in the automation section.. although you could argue here is better TODO
 
       // IFTTT notification
       if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
@@ -1128,6 +1122,10 @@ void do_loop() {
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png","max-age=86400");
         server->serveStatic("/ClosedAbsent.png", SPIFFS, "/ClosedAbsent.png","max-age=86400");
         server->serveStatic("/ClosedPresent.png", SPIFFS, "/ClosedPresent.png","max-age=86400");
+        server->serveStatic("/ClosedUnknown.png", SPIFFS, "/ClosedUnknown.png","max-age=86400");
+        server->serveStatic("/OpenAbsent.png", SPIFFS, "/OpenAbsent.png","max-age=86400");
+        server->serveStatic("/OpenPresent.png", SPIFFS, "/OpenPresent.png","max-age=86400");
+        server->serveStatic("/OpenUnknown.png", SPIFFS, "/OpenUnknown.png","max-age=86400");
         server->serveStatic("/Open.png", SPIFFS, "/Open.png","max-age=86400");
         server->on("/resetall",on_reset_all);
         server->on("/test",on_test);
