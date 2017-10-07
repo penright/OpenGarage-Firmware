@@ -30,7 +30,7 @@ Step 2: Create a Lock Device
 =======
 Setup a device in the bridge that has both lock options enabled. Don't pick anything else or your device won't work correctly
 The name you pick here is what you will call the device to Alexa, so Garage Door, Left Garage Door, Open Garage whatever
-<img src="docs/Screenshots/DeviceSetup.PNG" height=200> 
+<img src="/Screenshots/DeviceSetup.PNG" height=200> 
 
 Step 3:In the Alexa app add the related skill Node-Red by Ben Hardill
 =======
@@ -46,38 +46,38 @@ Step 5: Setup a flow
 =======
 Example Flow with details of each node
 
-<img src="docs/Screenshots/Node-RedFlow.PNG" height=200> 
+<img src="/Screenshots/Node-RedFlow.PNG" height=200> 
 
 GarageDoor - Alexa Home Node (incoming from the service)
 Enter your account details and pick your defined device
-<img src="docs/Screenshots/AlexaHomeNode.PNG" height=200> 
+<img src="/Screenshots/AlexaHomeNode.PNG" height=200> 
 
 Query or Change - Switch Node that determines if you asked Alexa for status or to shut the door
-<img src="docs/Screenshots/SwitchNode.PNG" height=200> 
+<img src="/Screenshots/SwitchNode.PNG" height=200> 
 
 Query OG Status - HTTP Request Node
 Insert your device name/IP address
-<img src="docs/Screenshots/QueryOGStatusNode.PNG" height=200> 
+<img src="/Screenshots/QueryOGStatusNode.PNG" height=200> 
 
 Build Alexa Response - Function Node
 This converts the OpenGarage data into the correct format for Alexa
-<img src="docs/Screenshots/BuildAlexaResponseNode.PNG" height=200> 
+<img src="/Screenshots/BuildAlexaResponseNode.PNG" height=200> 
 
 Alexa Home Response - Alexa Home Response Node
 No customization - this just replies to Alexa (No Screenshot
 
 Lock or Unlock - Switch Node - Detemines if the request was to Lock(Shut) or Unlock(Open)
-<img src="docs/Screenshots/LockOrUnlockNode.PNG" height=200> 
+<img src="/Screenshots/LockOrUnlockNode.PNG" height=200> 
 
 Shut Door - HTTP Request - Sends Shut Command to OpenGarage
 Note: This is customized for my firmware where there are discrete shut and open commands that only apply if applicable. If using out of the box you need to send Click=1 instead of close=1
-<img src="docs/Screenshots/CloseDoorNode.PNG" height=200> 
+<img src="/Screenshots/CloseDoorNode.PNG" height=200> 
 
 Parse Lock Request - Function - Takes the response from OpenGarage and formats it for Alexa 
 Note: This really only tells you if OG got the request - the timing doesn't currenly allow actual validation the door changed state (Amazon just added this but the bridge service doesn't support it yet)
-<img src="docs/Screenshots/ParseLockResponseNode.PNG" height=200> 
+<img src="/Screenshots/ParseLockResponseNode.PNG" height=200> 
 
 Delay 5s - This makes the service seem like it actually shuts the door before responding locked
-<img src="docs/Screenshots/Delay5sNode.PNG" height=200> 
+<img src="/Screenshots/Delay5sNode.PNG" height=200> 
 
 
