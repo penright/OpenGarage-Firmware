@@ -69,12 +69,21 @@ Updates:
 Requirement:
 ===========
 
-* Arduino 1.6.5 (the firmware may NOT compile on newer Arduino versions)
+* Arduino 1.6.13 (the firmware may NOT compile on newer Arduino versions)
 * ESP8266 core for Arduino (https://github.com/esp8266/Arduino)
 * Blynk library for Arduino (https://github.com/blynkkk/blynk-library)
+* MQTT PubSUbClient https://github.com/Imroy/pubsubclient
 * This (OpenGarage) library
 
-Copy the OpenGarage library to your Arduino's libraries folder. You also need to update a file in the ESP8266 core and Blynk library. See README.txt in the Modifications folder for details.
+Setting up a Dev Environment
+===========
+
+* Install 1.6.13 Arduino Client
+* Install Blynk via the Manage Libraries dialog
+* Install 2.3.0 of the ESP8266 Support via borad manager (Later versions consume too much memory)
+* Manually Install the pubsubclient library refrenced above (IMroy version)
+* Download this repository and extract the OpenGarage library to your Arduino's libraries folder. WHen done make sure the structure matches Libraries\OpenGarage\Examples
+* Copy the .h file from the modifications file to your system. On windows the file to replace can be found under the arduino structure in your profile. You cand find this by entrering in the run bar %LOCALAPPDATA%\Arduino15 and finding the file. See README under the modifications folder for details
 
 
 Compilation:
