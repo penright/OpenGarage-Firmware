@@ -136,5 +136,7 @@ This makes the service seem like it actually shuts the door before responding lo
 <img src="/Screenshots/Delay5sNode.PNG" height=200> 
 
 
-
-
+Step 6: Deploy and Test
+========
+Ensure you select the Deploy option in Node-Red. You should see the initial node change to Connected meaning it is talking to the bridge service. Test the service with Alexa, "Alexa Is [DeviceName] unlocked?" should work.
+If you have issues try adding in Debug nodes in line with your flow, they will output the message as it moves through
