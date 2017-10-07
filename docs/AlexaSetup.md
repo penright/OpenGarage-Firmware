@@ -114,7 +114,7 @@ Switch Node - Detemines if the request was to Lock(Shut) or Unlock(Open)
 
 Shut Door
 ========
-HTTP Request - Sends Shut Command to OpenGarage. Note: This is customized for my firmware where there are discrete shut and open commands that only apply if applicable. If using out of the box you need to send Click=1 instead of close=1
+HTTP Request - Sends Shut Command to OpenGarage. Note: This is customized for my firmware where there are discrete shut and open commands that only apply if applicable. If using out of the box you need to send Click=1 instead of close=1. Also make sure to add your device password into the request.
 
 
 <img src="/Screenshots/CloseDoorNode.PNG" height=200> 
