@@ -22,26 +22,29 @@ High Level Steps
 * Setup a Simple Node-Red flow to talk to both the bridge service and your opengarage
 
 Step 1: Setup an Account on the bridge web service site
-=======
+========
+
 Go here  https://alexa-node-red.bm.hardill.me.uk/
 Technically this would allow the owner of this site or anyone that has access to it to send a request as if they are Alexa but at least for my house there are easier ways to break in so I don't stress about it. I believe he has the code on github if you want to host your own service. I'm not sure why, but neither Ifft or Blynk have added similiar capabiliies.
 
 Step 2: Create a Lock Device
-=======
+========
+
 Setup a device in the bridge that has both lock options enabled. Don't pick anything else or your device won't work correctly
 The name you pick here is what you will call the device to Alexa, so Garage Door, Left Garage Door, Open Garage whatever
-<b>
 
 
 <img src="/Screenshots/DeviceSetup.PNG" height=200> 
-<b>
 
-Step 3:In the Alexa app add the related skill Node-Red by Ben Hardill
-=======
+
+Step 3: In the Alexa app add the related skill Node-Red by Ben Hardill
+========
+
 Once complete, Ask Alexa to Discover Devices,  the count it should report should have incremented (not sure why Alexa doesn't tell you the name of the devices it found..) You should also be able to now ask, "Alexa is [Name] Unlocked?" At this point it will say device not responding
 
 Step 4: Setup the Node-Red flow to handle status query and shut commands
-=======
+========
+
 On your device (I use a pi zero w) install or update Node-Red (its built in to Raspbian but out of date)
 Update via the instructions here 
 https://nodered.org/docs/hardware/raspberrypi. Then install the node node-red-contrib-alexa-home-skill using the Manage Palette option in the uppper right menu. When Complete reboot your device so everthing registers
@@ -49,24 +52,23 @@ https://nodered.org/docs/hardware/raspberrypi. Then install the node node-red-co
 Step 5: Setup a flow
 =======
 Example Flow with details of each node
-<b>
+<img src="/Screenshots/Node-RedFlow.PNG"> 
 
 
-<img src="/Screenshots/Node-RedFlow.PNG" height=200> 
-
-
-<b>
-
-GarageDoor - Alexa Home Node (incoming from the service)
+GarageDoor
+========
+Alexa Home Node (incoming from the service)
 Enter your account details and pick your defined device
 
 
 <img src="/Screenshots/AlexaHomeNode.PNG" height=200> 
-<b>
 
 
 
-Query or Change - Switch Node that determines if you asked Alexa for status or to shut the door
+
+Query or Change
+========
+Switch Node that determines if you asked Alexa for status or to shut the door
 
 
 <img src="/Screenshots/SwitchNode.PNG" height=200> 
@@ -74,8 +76,9 @@ Query or Change - Switch Node that determines if you asked Alexa for status or t
 
 
 
-Query OG Status - HTTP Request Node
-Insert your device name/IP address
+Query OG Status
+========
+HTTP Request Node. Insert your device name/IP address
 
 
 <img src="/Screenshots/QueryOGStatusNode.PNG" height=200> 
@@ -83,8 +86,9 @@ Insert your device name/IP address
 
 
 
-Build Alexa Response - Function Node
-This converts the OpenGarage data into the correct format for Alexa
+Build Alexa Response
+========
+Function Node. This converts the OpenGarage data into the correct format for Alexa
 
 
 <img src="/Screenshots/BuildAlexaResponseNode.PNG" height=200> 
@@ -92,34 +96,41 @@ This converts the OpenGarage data into the correct format for Alexa
 
 
 
-Alexa Home Response - Alexa Home Response Node
-No customization - this just replies to Alexa (No Screenshot
+Alexa Home Response
+========
+Alexa Home Response Node. No customization - this just replies to Alexa (No Screenshot)
 
 
 
 
-Lock or Unlock - Switch Node - Detemines if the request was to Lock(Shut) or Unlock(Open)
+Lock or Unlock
+========
+Switch Node - Detemines if the request was to Lock(Shut) or Unlock(Open)
 
 
 <img src="/Screenshots/LockOrUnlockNode.PNG" height=200> 
 
 
 
-Shut Door - HTTP Request - Sends Shut Command to OpenGarage
-Note: This is customized for my firmware where there are discrete shut and open commands that only apply if applicable. If using out of the box you need to send Click=1 instead of close=1
+Shut Door
+========
+HTTP Request - Sends Shut Command to OpenGarage. Note: This is customized for my firmware where there are discrete shut and open commands that only apply if applicable. If using out of the box you need to send Click=1 instead of close=1
 
 
 <img src="/Screenshots/CloseDoorNode.PNG" height=200> 
 
 
-Parse Lock Request - Function - Takes the response from OpenGarage and formats it for Alexa 
-Note: This really only tells you if OG got the request - the timing doesn't currenly allow actual validation the door changed state (Amazon just added this but the bridge service doesn't support it yet)
+Parse Lock Request
+========
+Function - Takes the response from OpenGarage and formats it for Alexa. Note: This really only tells you if OG got the request - the timing doesn't currenly allow actual validation the door changed state (Amazon just added this but the bridge service doesn't support it yet)
 
 
 <img src="/Screenshots/ParseLockResponseNode.PNG" height=200> 
 
 
-Delay 5s - This makes the service seem like it actually shuts the door before responding locked
+Delay 5s
+========
+This makes the service seem like it actually shuts the door before responding locked
 
 
 <img src="/Screenshots/Delay5sNode.PNG" height=200> 
