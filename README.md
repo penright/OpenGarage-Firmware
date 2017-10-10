@@ -184,3 +184,16 @@ The current firmware version is displayed at the bottom of the homepage, as well
 
 If the update ever fails, power cycle (unplug power and plug back power) the device and try again. If it still doesn't work, you can update firmware through the USB port (see instructions above).
 
+
+Using Magnetic Switch:
+===========
+
+Note: I don't have an official device, so pictures/corrections appreciated.
+
+* Step 1 - Get your device on your network using stock firmware and working through the built in web interface.
+* Step 2 - Update to my firmware via the webpage (use the master version)
+* Step 3 - If you plan on using the integrated webpage (vs the app) you may also want the status pictures that go along with the status, this isn't required but makes it easier to use. To do this is currently kind of a pain, you need to use the Arduino env (with ESP tools and ESP data upload installed) or using ESPflasher or similiar tool burn the other bin to 0x300000. Note this will erase your config so save any ifft or Blynk keys first and be prepared to do the network setup again.
+* Step 4 - Its not required, but if you have a 200-1k ohm resistor its a good idea to add it to the end of one of the leads. This is in case you ever update the firmware and the GPIO goes high it won't have a straight path to ground. The firmware uses the built in pull up but sometimes chips can do odd things before the code initializes
+* Step 5 - With the device turned off and not powered, connect one end the switch to GPIO4 and one to GND. According to the schematic these pins are present on the JMP2 header on the board Pin 1 (GND) and Pin 3 (GPIO4). Note: This is in revision 1.1 - if your board is different you may need to adjust. Double check if the silkscreen is labeled that you have GPIO4 and Ground
+At this point you should have GPIO4 --- ----RESISTOR------- SENSOR --------GND. Make sure your wires don't touch anything else
+* Step 6 - Power up the device and go to the built in webpage. Go to the Options page and then select the sensor type dropdown. For most sensors select Switch (Low Mount). This is for a standard sensor mounted at the bottom of the door so that it is in contact when closed. If your device is the opposite type or mounted opposite change to Switch (High Mount). It won't hurt anything to select the wrong one as it reverses the logic. When using this mode the sensor will always report either Threshold + 20 or Threshold -20 as the distance so that all existing APIs work.
