@@ -66,6 +66,7 @@ $('#msg').html('Device is now in AP mode. Log on<br>to SSID OG_xxxxxx, then <br>
 });  
 $('#btn_click').click(function(e) {
     show_msg('Sending command.....',5000,'green');
+    navigator.vibrate([500]);
     var comm = 'cc?click=1&dkey='+($('#dkey').val());
     $.getJSON(comm)
       .done(function( jd ) {
@@ -87,18 +88,30 @@ function show() {
   $('#lbl_dist').text(jd.dist +' (cm)').css('color', jd.dist==450?'red':'black');
   $('#lbl_status').text(jd.door?'OPEN':'CLOSED').css('color',jd.door?'red':'green'); 
   //Hide or Show vehicle info
-  if (jd.vehicle >=2){
+  if (jd.vehicle >=2){ //2 is unknown, 3 disabled
     $('#lbl_vstatus1').hide();
     $('#lbl_vstatus').text('');
   }else {
     $('#lbl_vstatus1').show()
-    $('#lbl_vstatus').text(jd.vehicle & !jd.door?'Present':(!jd.vehicle & !jd.door?'Absent':''));
+    $('#lbl_vstatus').text(jd.vehicle?'Present':'Absent');
   }
-  //Use correct graphics
-  if (jd.vehicle>=3){ //3 is disabled
-    $('#pic').attr('src', (jd.door?'/DoorOpen.png':'/DoorShut.png'));
-  }else{
-    $('#pic').attr('src', jd.door?'/Open.png':(jd.vehicle?'/ClosedPresent.png':'/ClosedAbsent.png'));
+  //Open Door (1)
+  if (jd.door){
+    if (jd.vehicle>=3){ //3 is disabled
+      $('#pic').attr('src', '/DoorOpen.png');
+    }else if (jd.vehicle==2){
+      $('#pic').attr('src', '/OpenUnknown.png');  
+    }else{
+      $('#pic').attr('src', jd.vehicle?'/OpenPresent.png':'/OpenAbsent.png');  
+    }
+  }else{ //Closed Door 
+    if (jd.vehicle>=3){ //3 is disabled
+      $('#pic').attr('src', '/DoorShut.png');
+    }else if (jd.vehicle==2){
+      $('#pic').attr('src', '/ClosedUnknown.png');  //This should be impossible
+    }else{
+      $('#pic').attr('src', jd.vehicle?'/ClosedPresent.png':'/ClosedAbsent.png');  
+    }
   }
   $('#lbl_beat').text(jd.rcnt);
   $('#lbl_rssi').text((jd.rssi>-71?'Good':(jd.rssi>-81?'Weak':'Poor')) +' ('+ jd.rssi +' dBm)');

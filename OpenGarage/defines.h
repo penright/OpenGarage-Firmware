@@ -33,8 +33,10 @@
 #define PIN_ECHO   14 //D5
 #define PIN_LED     2
 #define PIN_RESET  16
-#define PIN_BUZZER 13
-#define PIN_SWITCH 4 //D2 on nodemuc
+#define PIN_BUZZER 13 //D7
+#define PIN_JP2_4  5 //Jumper 2 ping 4 which is GPIO 5 d1
+#define PIN_JP2_3  4 //Jumper 2 ping 3 which is GPIO 4 d2 (Reserved for switch primary door)
+#define PIN_JP2_6  0 //A0
 
 // Default device name
 #define DEFAULT_NAME    "My OpenGarage"
@@ -87,6 +89,14 @@
 #define BLYNK_PIN_RCNT  V4
 #define BLYNK_PIN_IP    V5
 
+
+#define OPTION_JP24_DIS 0
+#define OPTION_JP24_VEH 1
+#define OPTION_JP24_USB 2
+#define OPTION_JP24_SWB 3
+#define OPTION_JP24_TEMP 4
+
+
 #define MAX_LOG_RECORDS    100
 #define ALARM_FREQ         1000
 // door status histogram
@@ -125,6 +135,8 @@ typedef enum {
   OPTION_DVIP,    // device IP
   OPTION_GWIP,    // gateway IP
   OPTION_SUBN,    // subnet
+  OPTION_JP23,    // Jumper 2 Pin 3 Configuration
+  OPTION_JP24,    // Jumper 2 Pin 4 Configuration
   NUM_OPTIONS     // number of options
 } OG_OPTION_enum;
 

@@ -70,6 +70,14 @@ const char html_sta_options[] PROGMEM = R"(<body>
     <tr><td><b>Device IP:</b></td><td><input type='text' size=15 maxlength=15 id='dvip' data-mini='true' disabled></td></tr>
     <tr><td><b>Gateway IP:</b></td><td><input type='text' size=15 maxlength=15 id='gwip' data-mini='true' disabled></td></tr>
     <tr><td><b>Subnet:</b></td><td><input type='text' size=15 maxlength=15 id='subn' data-mini='true' disabled></td></tr> 
+    <tr><td><b>Jumper 2 Pin 4</b></td><td>
+    <select name='jp24' id='jp24' data-mini='true'>
+    <option value=0>Disabled</option>
+    <option value=1>US Vehicle A</option>
+    <option value=2>US Door/Vehicle B</option>
+    <option value=3>Switch - B</option>
+    <option value=4>Temp Humidity (DHT11)</option>
+    </select></td></tr> 
     <tr><td colspan=2><input type='checkbox' id='cb_key' data-mini='true'><label for='cb_key'>Change Device Key</label></td></tr>
     <tr><td><b>New Key:</b></td><td><input type='password' size=24 maxlength=32 id='nkey' data-mini='true' disabled></td></tr>
     <tr><td><b>Confirm:</b></td><td><input type='password' size=24 maxlength=32 id='ckey' data-mini='true' disabled></td></tr>      
@@ -143,6 +151,7 @@ const char html_sta_options[] PROGMEM = R"(<body>
     var atoc=0;
     for(var i=1;i>=0;i--) { atoc=(atoc<<1)+eval_cb('#atoc'+i); }
     comm+='&atoc='+atoc;
+    comm+='&jp24='+$('#jp24').val();
     comm+='&name='+encodeURIComponent($('#name').val());
     comm+='&auth='+encodeURIComponent($('#auth').val());
     comm+='&iftt='+encodeURIComponent($('#iftt').val());
@@ -174,6 +183,7 @@ const char html_sta_options[] PROGMEM = R"(<body>
     $.getJSON('jo', function(jd) {
     $('#fwv').text('v'+(jd.fwv/100>>0)+'.'+(jd.fwv/10%10>>0)+'.'+(jd.fwv%10>>0));
     $('#acc').val(jd.acc).selectmenu('refresh');
+    $('#jp24').val(jd.jp24).selectmenu('refresh');
     $('#alm').val(jd.alm).selectmenu('refresh');
     $('#mnt').val(jd.mnt).selectmenu('refresh');
     if(jd.mnt>1) $('#dth').textinput('disable'); 

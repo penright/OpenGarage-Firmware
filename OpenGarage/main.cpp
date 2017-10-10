@@ -43,6 +43,7 @@ PubSubClient mqttclient(wificlient);
 static String scanned_ssids;
 static byte read_cnt = 0;
 static uint distance = 0;
+static uint vdistance = 0;
 static byte door_status = 0; //0 down, 1 up
 static int vehicle_status = 0; //0 No, 1 Yes, 2 Unknown (door open), 3 Option Disabled
 static bool curr_cloud_access_en = false;
@@ -73,7 +74,8 @@ void on_clear_log(){
 }
 
 void on_test(){
-  //server_send_html(scanned_ssids);
+  int chk = og.read_dht11(PIN_JP2_4);
+  DEBUG_PRINTLN(og.temperature);
 }
 
 void server_send_result(byte code, const char* item = NULL) {
@@ -123,8 +125,9 @@ void on_sta_view_options() {
   if(curr_mode == OG_MOD_AP) return;
   String html = FPSTR(html_jquery_header);
   html += FPSTR(html_sta_options);
+  //Sometimes the send function has issues with the options page (maybe size related)
+  //Move here to better debug
   server->send(200, "text/html", html);
-  DEBUG_PRINTLN(F("Complete sending page"));
 }
 
 void on_sta_view_logs() {
@@ -233,6 +236,28 @@ void on_sta_debug() {
   server_send_html(html);
 }
 
+void on_sta_jmp24() {
+  String html = "";
+  html += F("{");
+  html += F("\"option\":");
+  html += og.options[OPTION_JP24].ival;
+  if (og.options[OPTION_JP24].ival == OPTION_JP24_VEH){
+    html += F(",\"vdist\":");
+    html += vdistance;
+    html += F(",\"vehicle\":");
+    html += vehicle_status;
+  }
+  if (og.options[OPTION_JP24].ival == OPTION_JP24_TEMP){
+    int chk = og.read_dht11(PIN_JP2_4);
+    html += F("\"temp\":");
+    html += og.temperature;
+    html += F(",\"humidity\":");
+    html += og.humidity;
+  }
+  html += F("}");
+  server_send_html(html);
+}
+
 void on_sta_logs() {
   if(curr_mode == OG_MOD_AP) return;
   String html = "";
@@ -273,7 +298,9 @@ bool verify_device_key() {
 void on_sta_change_controller() {
   if(curr_mode == OG_MOD_AP) return;
 
+  DEBUG_PRINTLN(F("Change Controller initiated"));
   if(!verify_device_key()) {
+    DEBUG_PRINTLN(F("Incorrect device key"));
     server_send_result(HTML_UNAUTHORIZED);
     return;
   }
@@ -301,6 +328,7 @@ void on_sta_change_controller() {
     server_send_result(HTML_SUCCESS);
     og.reset_to_ap();
   } else {
+    DEBUG_PRINTLN(F("Invalid request"));
     server_send_result(HTML_NOT_PERMITTED);
   }
 }
@@ -684,7 +712,7 @@ void on_sta_upload() {
 void check_status_ap() {
   static ulong cs_timeout = 0;
   if(millis() > cs_timeout) {
-    DEBUG_PRINTLN(og.read_distance());
+    DEBUG_PRINTLN(og.read_distance(PIN_TRIG, PIN_ECHO));
     DEBUG_PRINTLN(OG_FWV);
     cs_timeout = millis() + 5000;
   }
@@ -774,6 +802,12 @@ void perform_automation(byte event) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
     else {
       if(curr_utc_time > justopen_timestamp + (ulong)og.options[OPTION_ATI].ival*60L) {
+        DEBUG_PRINT("Curr time");
+        DEBUG_PRINTLN(curr_utc_time);
+        DEBUG_PRINT("just open timestamp");
+        DEBUG_PRINTLN(justopen_timestamp);
+        DEBUG_PRINT("Addition");
+        DEBUG_PRINTLN((ulong)og.options[OPTION_ATI].ival*60L);
         // reached timeout, perform action
         if(ato & OG_AUTO_NOTIFY) {
           // send notification
@@ -823,6 +857,11 @@ void perform_automation(byte event) {
         }
         justopen_timestamp = 0;
       }
+      else if ((og.options[OPTION_ATIB].ival ==24) && (curr_utc_hour >0) && (automationclose_triggered))
+      {
+        DEBUG_PRINTLN("Unlocking automation close function");
+        automationclose_triggered=false; //Unlock the hour after the setting
+      }
       else if ((curr_utc_hour > og.options[OPTION_ATIB].ival) && (automationclose_triggered))
       {
         DEBUG_PRINTLN("Unlocking automation close function");
@@ -835,27 +874,43 @@ void perform_automation(byte event) {
 }
 
 void check_status() {
-  static ulong checkstatus_timeout = 0;
+  static ulong checkstatus_timeout = 0; //if you don't do this NTP initially doesn't update and this loop runs messing up the state
   static ulong checkstatus_report_timeout = 0; 
-  if((curr_utc_time > checkstatus_timeout) || (checkstatus_timeout == 0))  { //also check on first boot
+  if((curr_utc_time > checkstatus_timeout) || !checkstatus_timeout) { 
+    DEBUG_PRINT(F("+"));
     og.set_led(HIGH);
     uint threshold = og.options[OPTION_DTH].ival;
     uint vthreshold = og.options[OPTION_VTH].ival;
-    if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
-      //sensor is ultrasonic
-      distance = og.read_distance();
+    
+    if (og.options[OPTION_MNT].ival == OG_MNT_CEILING) {
+      //sensor is ultrasonic ceiling
+      distance = og.read_distance(PIN_TRIG, PIN_ECHO);
       door_status = (distance>threshold)?0:1; 
-      if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
-       door_status = 1-door_status; } // reverse logic for side mount
-      else {
-        if (vthreshold == 0 ) //if disabled via threshold setting set to disable flag (3)
-          { vehicle_status = 3;}
-        else if ((!door_status) && (distance != 450)){ //This only works if door is closed (otherwise it blocks)
-          vehicle_status = ((distance>threshold) && (distance <=vthreshold))?1:0;
-        }else {vehicle_status = 2;}
-      }
+     
+      //Determine vehicle occupancy
+      if (vthreshold >0) {
+        if (og.options[OPTION_JP24].ival == OPTION_JP24_VEH){
+          vdistance = og.read_distance(PIN_JP2_4, PIN_JP2_4);
+          vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;
+        }else if (!door_status) {
+          vdistance = distance;
+          vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;
+        }else{vehicle_status = 2;}
+      }else {vehicle_status = 3;}
+
+      //DEBUG_PRINT("Distance Value:");
+      //DEBUG_PRINTLN(distance);
+
+    }else if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
+      distance = og.read_distance(PIN_TRIG, PIN_ECHO);
+      door_status = (distance>threshold)?1:0; 
+      
+      if ((vthreshold >0) && (og.options[OPTION_JP24].ival == OPTION_JP24_VEH)){
+        vdistance = og.read_distance(PIN_JP2_4, PIN_JP2_4);
+        vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;}
+      else {vehicle_status =3;}
+
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
-      vehicle_status= 3;
       if (og.get_switch() == LOW){
         //DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
         door_status =0; 
@@ -866,8 +921,12 @@ void check_status() {
         door_status =1; 
         distance = threshold - 20;
       }
+      //Determine vehicle occupancy
+      if ((vthreshold >0) && (og.options[OPTION_JP24].ival == OPTION_JP24_VEH)){
+        vdistance = og.read_distance(PIN_JP2_4, PIN_JP2_4);
+        vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;}
+      else {vehicle_status =3;}
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_HIGH){
-      vehicle_status= 3;
       if (og.get_switch() == LOW){
         //DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
         door_status =1; 
@@ -878,16 +937,25 @@ void check_status() {
         door_status =0; 
         distance = threshold + 20;
       }
+      //Determine vehicle occupancy
+      if ((vthreshold >0) && (og.options[OPTION_JP24].ival == OPTION_JP24_VEH)){
+        vdistance = og.read_distance(PIN_JP2_4, PIN_JP2_4);
+        vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;}
+      else {vehicle_status =3;}
     }
+
     og.set_led(LOW);
     read_cnt = (read_cnt+1)%100;
-    if (checkstatus_timeout == 0){
+
+    //This needs to happen or the automation gets confused if door is open upon reboot
+    if (!checkstatus_timeout){
       DEBUG_PRINTLN(F("First time checking status don't trigger a status change, set full history to current value"));
       if (door_status) { door_status_hist = B11111111; }
       else { door_status_hist = B00000000; }
     }else{
        door_status_hist = (door_status_hist<<1) | door_status;
     }
+
     //DEBUG_PRINT(F("Histogram value:"));
     //DEBUG_PRINTLN(door_status_hist);
     //DEBUG_PRINT(F("Vehicle Status:"));
@@ -947,11 +1015,10 @@ void check_status() {
           mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
         }
       }
-
     } //End state change updates
 
     //Send current status only on change and longer interval
-    if ((curr_utc_time >checkstatus_report_timeout) || (event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) ){
+    if ((curr_utc_time >checkstatus_report_timeout) || (event == DOOR_STATUS_JUST_OPENED) || (event == DOOR_STATUS_JUST_CLOSED) ){
       DEBUG_PRINT(curr_utc_time);
       uint32_t ram = ESP.getFreeHeap();
       Serial.printf(" RAM: %d ", ram);
@@ -997,7 +1064,6 @@ void check_status() {
     //Process any built in automations
     perform_automation(event);
     checkstatus_timeout = curr_utc_time + og.options[OPTION_RIV].ival;
-    
   }
 }
 
@@ -1007,7 +1073,7 @@ void time_keeping() {
   static ulong time_keeping_timeout = 0;
 
   if(!configured) {
-    DEBUG_PRINTLN(F("Set time server"));
+    DEBUG_PRINTLN(F("Set time server value"));
     configTime(0, 0, "pool.ntp.org", "time.nist.org", NULL);
     configured = true;
   }
@@ -1016,6 +1082,7 @@ void time_keeping() {
     ulong gt = time(nullptr);
     if(!gt) {
       // if we didn't get response, re-try after 2 seconds
+      DEBUG_PRINTLN("Time Sync Failed, try in 2 seconds");
       time_keeping_timeout = curr_utc_time + 2;
     } else {
       curr_utc_time = gt;
@@ -1110,11 +1177,12 @@ void do_loop() {
         server->on("/jo", on_sta_options);
         server->on("/jl", on_sta_logs);
         server->on("/vo", on_sta_view_options);
-        server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
+       // server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
         server->on("/vl", on_sta_view_logs);
         server->on("/cc", on_sta_change_controller);
         server->on("/co", on_sta_change_options);
         server->on("/db", on_sta_debug);
+        server->on("/ext24",  on_sta_jmp24);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
         server->on("/clearlog", on_clear_log);
@@ -1143,6 +1211,11 @@ void do_loop() {
       }
       led_blink_ms = 0;
       og.set_led(LOW);
+      //If you start doing automation checks before time syncs you can see odd behavior
+      while(curr_utc_time < 1000000000) {
+        time_keeping();
+        yield();
+      }
       og.state = OG_STATE_CONNECTED;
 
     } else {
@@ -1177,6 +1250,7 @@ void do_loop() {
       check_status_ap();
     } else {
       if(WiFi.status() == WL_CONNECTED) {
+        //Main loop of work
         time_keeping();
         check_status(); //This checks the door, sends info to services and processes the automation rules
         if(curr_local_access_en)

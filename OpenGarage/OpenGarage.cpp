@@ -22,10 +22,12 @@
 
 #include "OpenGarage.h"
 
-ulong OpenGarage::echo_time;
+//ulong OpenGarage::echo_time;
 byte  OpenGarage::state = OG_STATE_INITIAL;
 File  OpenGarage::log_file;
 byte  OpenGarage::alarm = 0;
+int OpenGarage::humidity;
+int OpenGarage::temperature;
 
 static const char* config_fname = CONFIG_FNAME;
 static const char* log_fname = LOG_FNAME;
@@ -60,7 +62,9 @@ OptionStruct OpenGarage::options[] = {
   {"mqtt", 0, 0, "-.-.-.-"},
   {"dvip", 0, 0, "-.-.-.-"},
   {"gwip", 0, 0, "-.-.-.-"},
-  {"subn", 0, 0, "255.255.255.0"}
+  {"subn", 0, 0, "255.255.255.0"},
+  {"jp23", 0, 255, ""},
+  {"jp24", 0, 255, ""}
 };
     
 void OpenGarage::begin() {
@@ -82,7 +86,7 @@ void OpenGarage::begin() {
   pinMode(PIN_ECHO, INPUT);
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
-  pinMode(PIN_SWITCH, INPUT_PULLUP);
+  pinMode(PIN_JP2_3, INPUT_PULLUP);
   
   state = OG_STATE_INITIAL;
   
@@ -185,22 +189,24 @@ void OpenGarage::options_save() {
   file.close();
 }
 
-ulong OpenGarage::read_distance_once() {
+ulong OpenGarage::read_distance_once(int TRIG, int ECHO) {
   //TODO handle max value as handled error in the UI - check long distance for car detection
-  digitalWrite(PIN_TRIG, LOW);
+  pinMode(TRIG,OUTPUT);
+  digitalWrite(TRIG, LOW);
   delayMicroseconds(2);
-  digitalWrite(PIN_TRIG, HIGH);
+  digitalWrite(TRIG, HIGH);
   delayMicroseconds(10);
-  digitalWrite(PIN_TRIG, LOW);
+  digitalWrite(TRIG, LOW);
+  pinMode(ECHO,INPUT);
   // wait till echo pin's rising edge
   unsigned long quit_time=micros()+26233L;
-  while((digitalRead(PIN_ECHO)==LOW)&& (micros()<quit_time));
+  while((digitalRead(ECHO)==LOW)&& (micros()<quit_time));
   {//Do nothing
   };
   unsigned long start_time = micros();
   quit_time=start_time+26233L;
   //wait till echo pin's falling edge
-  while((digitalRead(PIN_ECHO)==HIGH) && (micros()<quit_time));
+  while((digitalRead(ECHO)==HIGH) && (micros()<quit_time));
   ulong lapse = micros() - start_time;
   if (lapse>26233L) lapse = 26233L;
   //DEBUG_PRINTLN(F("Distance issue, setting to low value"));
@@ -208,19 +214,87 @@ ulong OpenGarage::read_distance_once() {
   return lapse;
 }
 
-uint OpenGarage::read_distance() {
+uint OpenGarage::read_distance(int TRIG, int ECHO) {
   byte i;
   unsigned long _time = 0;
   // do three readings in a roll to reduce noise
   byte K = 3;
   for(i=0;i<K;i++) {
-    _time += read_distance_once();
+    _time += read_distance_once(TRIG, ECHO);
     delay(50);
   }
   _time /= K;
-  echo_time = _time;
-  return (uint)(echo_time*0.01716f);  // 34320 cm / 2 / 10^6 s
+  //echo_time = _time;
+  return (uint)(_time*0.01716f);  // 34320 cm / 2 / 10^6 s
 }
+
+
+int OpenGarage::read_dht11(int pin){
+
+    #define DHTLIB_OK				0
+    #define DHTLIB_ERROR_CHECKSUM	-1
+    #define DHTLIB_ERROR_TIMEOUT	-2
+
+    // BUFFER TO RECEIVE
+    uint8_t  bits[5];
+    uint8_t  cnt = 7;
+    uint8_t  idx = 0;
+
+    // EMPTY BUFFER
+    for (int i=0; i< 5; i++) bits[i] = 0;
+
+    // REQUEST SAMPLE
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+    delay(18);
+    digitalWrite(pin, HIGH);
+    delayMicroseconds(40);
+    pinMode(pin, INPUT);
+
+    // ACKNOWLEDGE or TIMEOUT
+    unsigned int loopCnt = 10000;
+    while(digitalRead(pin) == LOW)
+      if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
+
+    loopCnt = 10000;
+    while(digitalRead(pin) == HIGH)
+      if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
+
+    // READ OUTPUT - 40 BITS => 5 BYTES or TIMEOUT
+    for (int i=0; i<40; i++)
+    {
+      loopCnt = 10000;
+      while(digitalRead(pin) == LOW)
+        if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
+
+      unsigned long t = micros();
+
+      loopCnt = 10000;
+      while(digitalRead(pin) == HIGH)
+        if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
+
+      if ((micros() - t) > 40) bits[idx] |= (1 << cnt);
+      if (cnt == 0)   // next byte?
+      {
+        cnt = 7;    // restart at MSB
+        idx++;      // next byte!
+      }
+      else cnt--;
+    }
+
+    // WRITE TO RIGHT VARS
+    // as bits[1] and bits[3] are allways zero they are omitted in formulas.
+    humidity    = bits[0]; 
+    temperature = bits[2]; 
+
+    uint sum = bits[0] + bits[2];  
+
+    if (bits[4] != sum) return DHTLIB_ERROR_CHECKSUM;
+    return DHTLIB_OK;
+}
+
+
+
 
 bool OpenGarage::get_cloud_access_en() {
   if(options[OPTION_ACC].ival == OG_ACC_CLOUD ||
