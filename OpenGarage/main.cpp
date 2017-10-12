@@ -43,6 +43,7 @@ PubSubClient mqttclient(wificlient);
 static String scanned_ssids;
 static byte read_cnt = 0;
 static uint distance = 0;
+static uint vdistance = 0;
 static byte door_status = 0; //0 down, 1 up
 static int vehicle_status = 0; //0 No, 1 Yes, 2 Unknown (door open), 3 Option Disabled
 static bool curr_cloud_access_en = false;
@@ -844,13 +845,15 @@ void check_status() {
       distance = og.read_distance();
       door_status = (distance>threshold)?0:1; 
       if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
-       door_status = 1-door_status; } // reverse logic for side mount
+       door_status = 1-door_status;  // reverse logic for side mount
+       vehicle_status = 3;}
       else {
-        if (vthreshold == 0 ) //if disabled via threshold setting set to disable flag (3)
-          { vehicle_status = 3;}
-        else if ((!door_status) && (distance != 450)){ //This only works if door is closed (otherwise it blocks)
-          vehicle_status = ((distance>threshold) && (distance <=vthreshold))?1:0;
-        }else {vehicle_status = 2;}
+        if (vthreshold >0) {
+          if (!door_status) {
+            vdistance = distance;
+            vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;
+          }else{vehicle_status = 2;}
+        }else {vehicle_status = 3;}
       }
     }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
       vehicle_status= 3;
