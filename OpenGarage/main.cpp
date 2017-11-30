@@ -28,6 +28,8 @@
 #include "OpenGarage.h"
 #include "espconnect.h"
 #include <BlynkSimpleEsp8266.h>
+#include <PubSubClient.h> //https://github.com/Imroy/pubsubclient
+//Change Timeout to 25 in header file
 
 OpenGarage og;
 ESP8266WebServer *server = NULL;
@@ -35,10 +37,15 @@ ESP8266WebServer *server = NULL;
 WidgetLED blynk_led(BLYNK_PIN_LED);
 WidgetLCD blynk_lcd(BLYNK_PIN_LCD);
 
+static WiFiClient wificlient;
+PubSubClient mqttclient(wificlient);
+
 static String scanned_ssids;
 static byte read_cnt = 0;
 static uint distance = 0;
-static byte door_status = 0;
+static uint vdistance = 0;
+static byte door_status = 0; //0 down, 1 up
+static int vehicle_status = 0; //0 No, 1 Yes, 2 Unknown (door open), 3 Option Disabled
 static bool curr_cloud_access_en = false;
 static bool curr_local_access_en = false;
 static uint led_blink_ms = LED_FAST_BLINK;
@@ -49,11 +56,25 @@ static byte curr_mode;
 // maximum 8 bits
 static byte door_status_hist = 0;
 static ulong curr_utc_time = 0;
+static ulong curr_utc_hour= 0;
 static HTTPClient http;
+
 void do_setup();
 
 void server_send_html(String html) {
   server->send(200, "text/html", html);
+}
+
+void on_reset_all(){
+  og.state = OG_STATE_RESET;
+}
+
+void on_clear_log(){
+  og.log_reset();
+}
+
+void on_test(){
+  //server_send_html(scanned_ssids);
 }
 
 void server_send_result(byte code, const char* item = NULL) {
@@ -103,7 +124,8 @@ void on_sta_view_options() {
   if(curr_mode == OG_MOD_AP) return;
   String html = FPSTR(html_jquery_header);
   html += FPSTR(html_sta_options);
-  server_send_html(html);
+  server->send(200, "text/html", html);
+  DEBUG_PRINTLN(F("Complete sending page"));
 }
 
 void on_sta_view_logs() {
@@ -167,6 +189,8 @@ void on_sta_controller() {
   html += distance;
   html += F(",\"door\":");
   html += door_status;
+  html += F(",\"vehicle\":");
+  html += vehicle_status;
   html += F(",\"rcnt\":");
   html += read_cnt;
   html += F(",\"fwv\":");
@@ -179,6 +203,31 @@ void on_sta_controller() {
   html += ESP.getChipId();
   html += F(",\"rssi\":");
   html += (int16_t)WiFi.RSSI();
+  html += F("}");
+  server_send_html(html);
+}
+
+void on_sta_debug() {
+  String html = "";
+  html += F("{");
+  html += F("\"rcnt\":");
+  html += read_cnt;
+  html += F(",\"fwv\":");
+  html += og.options[OPTION_FWV].ival;
+  html += F(",\"name\":\"");
+  html += og.options[OPTION_NAME].sval;
+  html += F("\",\"mac\":\"");
+  html += get_mac();
+  html += F("\",\"cid\":");
+  html += ESP.getChipId();
+  html += F(",\"rssi\":");
+  html += (int16_t)WiFi.RSSI();
+  html += F(",\"bssid\":\"");
+  html += WiFi.BSSIDstr();
+  html += F("\",\"build\":\"");
+  html += (F(__DATE__));
+  html += F("\",\"Freeheap\":");
+  html += (int16_t)ESP.getFreeHeap();
   html += F("}");
   server_send_html(html);
 }
@@ -227,14 +276,21 @@ void on_sta_change_controller() {
     server_send_result(HTML_UNAUTHORIZED);
     return;
   }
-  if(server->hasArg("click")) {
+  if(server->hasArg("click") || server->hasArg("close") || server->hasArg("open"))  {
+    DEBUG_PRINTLN(F("Received locally generated button request (click, close, or open)"));
     server_send_result(HTML_SUCCESS);
-    if(!og.options[OPTION_ALM].ival) {
-      // if alarm is not enabled, trigger relay right away
-      og.click_relay();
-    } else {
-      // else, set alarm
-      og.set_alarm();
+    //1 is open
+    if ((server->hasArg("close") && door_status) || (server->hasArg("open") && !door_status) || (server->hasArg("click"))) {
+      DEBUG_PRINTLN(F("Valid command recieved based on door status"));
+      if(!og.options[OPTION_ALM].ival) {
+        // if alarm is not enabled, trigger relay right away
+        og.click_relay();
+      } else {
+        // else, set alarm
+        og.set_alarm();
+      }
+    }else{
+      DEBUG_PRINTLN(F("Command request not valid, door already in requested state"));
     }
   } else if(server->hasArg("reboot")) {
     server_send_result(HTML_SUCCESS);
@@ -431,6 +487,7 @@ void on_ap_try_connect() {
   html += F("}");
   server_send_html(html);
   if(WiFi.status() == WL_CONNECTED && WiFi.localIP()) {
+    DEBUG_PRINTLN(F("STA connected, updating option file"));
     og.options[OPTION_MOD].ival = OG_MOD_STA;
     if(og.options[OPTION_AUTH].sval.length() == 32) {
       og.options[OPTION_ACC].ival = OG_ACC_BOTH;
@@ -438,6 +495,49 @@ void on_ap_try_connect() {
     og.options_save();  
     restart_timeout = millis() + 2000;
     og.state = OG_STATE_RESTART;
+  }else {DEBUG_PRINTLN(F("Attemped STA connect but failed"));}
+}
+
+// MQTT callback to read "Button" requests
+void mqtt_callback(const MQTT::Publish& pub) { 
+  //DEBUG_PRINT("MQTT Message Received: ");
+  //DEBUG_PRINT(pub.topic());
+  //DEBUG_PRINT(" Data: ");
+  //DEBUG_PRINTLN(pub.payload_string());
+
+  //Accept button on any topic for backwards compat with existing code - use IN messages below if possible
+  if (pub.payload_string() == "Button") {
+    DEBUG_PRINTLN(F("MQTT Button request received, change door state"));
+    if(!og.options[OPTION_ALM].ival) {
+      // if alarm is not enabled, trigger relay right away
+      og.click_relay();
+    } 
+	  else {
+      // else, set alarm
+      og.set_alarm();
+    }
+  }
+  //Accept click for consistency with api, open and close should be used instead, use IN topic if possible
+  if (pub.topic() == og.options[OPTION_NAME].sval +"/IN/STATE" ){
+    DEBUG_PRINT(F("MQTT IN Message detected, check data for action, Data:"));
+    DEBUG_PRINTLN(pub.payload_string());
+    if ( (pub.payload_string() == "close" && door_status) || (pub.payload_string() == "open" && !door_status) || pub.payload_string() == "click") {
+      DEBUG_PRINTLN(F("Command is valid based on existing state, trigger change"));
+      if(!og.options[OPTION_ALM].ival) {
+        // if alarm is not enabled, trigger relay right away
+        og.click_relay();
+      } 
+      else {
+        // else, set alarm
+        og.set_alarm();
+      }
+    }else if ( (pub.payload_string() == "close" && !door_status) || (pub.payload_string() == "open" && door_status) ){
+      DEBUG_PRINTLN(F("Command request not valid, door already in requested state"));
+    }
+    else {
+      DEBUG_PRINT(F("Unrecognized MQTT data/command:"));
+      DEBUG_PRINTLN(pub.payload_string());
+    }
   }
 }
 
@@ -451,6 +551,10 @@ void do_setup()
   WiFi.persistent(false); // turn off persistent, fixing flash crashing issue
   og.begin();
   og.options_setup();
+  DEBUG_PRINT(F("Complile Info: "));
+  DEBUG_PRINT(F(__DATE__));
+  DEBUG_PRINT(F(" "));
+  DEBUG_PRINTLN(F(__TIME__));
   curr_cloud_access_en = og.get_cloud_access_en();
   curr_local_access_en = og.get_local_access_en();
   curr_mode = og.get_mode();
@@ -460,6 +564,7 @@ void do_setup()
     DEBUG_PRINTLN(og.options[OPTION_HTP].ival);
   }
   led_blink_ms = LED_FAST_BLINK;
+  
 }
 
 void process_ui()
@@ -548,8 +653,10 @@ void on_sta_upload_fin() {
 void on_sta_upload() {
   HTTPUpload& upload = server->upload();
   if(upload.status == UPLOAD_FILE_START){
+    DEBUG_PRINTLN(F("Stopping all network clients"));
     WiFiUDP::stopAll();
     Blynk.disconnect(); // disconnect Blynk during firmware upload
+    mqttclient.disconnect();
     DEBUG_PRINT(F("prepare to upload: "));
     DEBUG_PRINTLN(upload.filename);
     uint32_t maxSketchSpace = (ESP.getFreeSketchSpace()-0x1000)&0xFFFFF000;
@@ -578,38 +685,90 @@ void check_status_ap() {
   if(millis() > cs_timeout) {
     DEBUG_PRINTLN(og.read_distance());
     DEBUG_PRINTLN(OG_FWV);
-    cs_timeout = millis() + 2000;
+    cs_timeout = millis() + 5000;
+  }
+}
+
+bool mqtt_connect_subscibe() {
+  static ulong mqtt_subscribe_timeout = 0;
+  if(curr_utc_time > mqtt_subscribe_timeout) {
+    if (!mqttclient.connected()) {
+      DEBUG_PRINT(F("MQTT Not connected- (Re)connect MQTT"));
+      mqttclient.set_server(og.options[OPTION_MQTT].sval, 1883);
+      if (mqttclient.connect(og.options[OPTION_NAME].sval)) {
+        mqttclient.set_callback(mqtt_callback); 		
+        mqttclient.subscribe(og.options[OPTION_NAME].sval);
+        mqttclient.subscribe(og.options[OPTION_NAME].sval +"/IN/#");
+        DEBUG_PRINTLN(F("......Success, Subscribed to MQTT Topic"));
+        return true;
+      }else {
+        DEBUG_PRINTLN(F("......Failed to Connect to MQTT"));
+        mqtt_subscribe_timeout = curr_utc_time + 50; //Takes about 5 seconds to get through the loop
+        return false;
+      }
+    }
   }
 }
 
 void perform_notify(String s) {
+  DEBUG_PRINT(F("Sending Notify to connected systems, value:"));
+  DEBUG_PRINTLN(s);
   // Blynk notification
   if(curr_cloud_access_en && Blynk.connected()) {
+    DEBUG_PRINTLN(F(" Blynk Notify"));
     Blynk.notify(s);
   }
 
   // IFTTT notification
   if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
+    DEBUG_PRINTLN(" Sending IFTTT Notification");
     http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
     http.addHeader("Content-Type", "application/json");
     http.POST("{\"value1\":\""+s+"\"}");
-    http.writeToStream(&Serial);
+    String payload = http.getString();
     http.end();
+    if(payload.indexOf("Congratulations") >= 0) {
+      DEBUG_PRINTLN(" Successfully updated IFTTT");
+    }else{
+      DEBUG_PRINT(" Error from IFTTT: ");
+      DEBUG_PRINTLN(payload);
+    }
+  }
+
+  //Mqtt notification
+  if(og.options[OPTION_MQTT].sval.length()>8) {
+    if (mqttclient.connected()) {
+        DEBUG_PRINTLN(" Sending MQTT Notification");
+        mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/NOTIFY",s); 
+    }
   }
 }
 
 void perform_automation(byte event) {
+  static bool automationclose_triggered=false;
   byte ato = og.options[OPTION_ATO].ival;
-  if(!ato) {
+  byte atob = og.options[OPTION_ATOB].ival;
+  byte atoc = og.options[OPTION_ATOC].ival;
+  if(!ato && !atob && !atoc) {
     justopen_timestamp = 0;
     return;
   }
   if(event == DOOR_STATUS_JUST_OPENED) {
     justopen_timestamp = curr_utc_time; // record time stamp
-    perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");
+    if (atoc & OG_NOTIFY_DO)
+      { perform_notify(og.options[OPTION_NAME].sval + " just OPENED!");}
+    
+    //If the door is set to auto close at a certain hour, ensure if manually opened it doesn't autoshut
+    if( (curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered) ){
+      DEBUG_PRINTLN(" Door opened during automation hour, set to not auto-close ");
+      automationclose_triggered=true;
+    }
+
   } else if (event == DOOR_STATUS_JUST_CLOSED) {
     justopen_timestamp = 0; // reset time stamp
-    perform_notify(og.options[OPTION_NAME].sval + " just closed!");
+    if (atoc & OG_NOTIFY_DC)
+      { perform_notify(og.options[OPTION_NAME].sval + " just CLOSED!");}
+
   } else if (event == DOOR_STATUS_REMAIN_OPEN) {
     if (!justopen_timestamp) justopen_timestamp = curr_utc_time; // record time stamp
     else {
@@ -635,6 +794,39 @@ void perform_automation(byte event) {
         }
         justopen_timestamp = 0;
       }
+      
+      if(( curr_utc_hour == og.options[OPTION_ATIB].ival) && (!automationclose_triggered)) {
+        // still open past time, perform action
+        DEBUG_PRINTLN("Door is open at specified close time and automation not yet triggered: ");
+        automationclose_triggered=true;
+        if(atob & OG_AUTO_NOTIFY) {
+          // send notification
+          String s = og.options[OPTION_NAME].sval+" is open after ";
+          s+= og.options[OPTION_ATIB].ival;
+          s+= " UTC. Current hour:";
+          s+= curr_utc_hour;
+          if(atob & OG_AUTO_CLOSE) {
+            s+= " It will be auto-closed shortly";
+          } else {
+            s+= " This is a reminder for you.";
+          }
+          perform_notify(s);
+        }
+        if(atob & OG_AUTO_CLOSE) {
+          // auto close door
+          // alarm is mandatory in auto-close
+          if(!og.options[OPTION_ALM].ival) { og.set_alarm(OG_ALM_5); }
+          else { 
+            og.set_alarm(); 
+          }
+        }
+        justopen_timestamp = 0;
+      }
+      else if ((curr_utc_hour > og.options[OPTION_ATIB].ival) && (automationclose_triggered))
+      {
+        DEBUG_PRINTLN("Unlocking automation close function");
+        automationclose_triggered=false; //Unlock the hour after the setting
+      }
     }
   } else {
     justopen_timestamp = 0;
@@ -643,44 +835,178 @@ void perform_automation(byte event) {
 
 void check_status() {
   static ulong checkstatus_timeout = 0;
-  if(curr_utc_time > checkstatus_timeout) {
+  static ulong checkstatus_report_timeout = 0; 
+  if((curr_utc_time > checkstatus_timeout) || (checkstatus_timeout == 0))  { //also check on first boot
     og.set_led(HIGH);
-    distance = og.read_distance();
+    uint threshold = og.options[OPTION_DTH].ival;
+    uint vthreshold = og.options[OPTION_VTH].ival;
+    if ((og.options[OPTION_MNT].ival == OG_MNT_SIDE) || (og.options[OPTION_MNT].ival == OG_MNT_CEILING)){
+      //sensor is ultrasonic
+      distance = og.read_distance();
+      door_status = (distance>threshold)?0:1; 
+      if (og.options[OPTION_MNT].ival == OG_MNT_SIDE){
+       door_status = 1-door_status;  // reverse logic for side mount
+       vehicle_status = 3;}
+      else {
+        if (vthreshold >0) {
+          if (!door_status) {
+            vdistance = distance;
+            vehicle_status = ((vdistance>threshold) && (vdistance <=vthreshold))?1:0;
+          }else{vehicle_status = 2;}
+        }else {vehicle_status = 3;}
+      }
+    }else if (og.options[OPTION_MNT].ival == OG_SWITCH_LOW){
+      vehicle_status= 3;
+      if (og.get_switch() == LOW){
+        //DEBUG_PRINTLN("Low Mount Switch reads LOW, setting distance to high value (indicating closed)");
+        door_status =0; 
+        distance = threshold + 20;
+      }
+      else{
+        //DEBUG_PRINTLN("Low Mount Switch reads HIGH, setting distance to low value (indicating open)");
+        door_status =1; 
+        distance = threshold - 20;
+      }
+    }else if (og.options[OPTION_MNT].ival == OG_SWITCH_HIGH){
+      vehicle_status= 3;
+      if (og.get_switch() == LOW){
+        //DEBUG_PRINTLN("High Mount Switch reads LOW, setting distance to low value (indicating open)");
+        door_status =1; 
+        distance = threshold - 20;
+      }
+      else{
+        //DEBUG_PRINTLN("High Mount Switch reads HIGH, setting distance to high value (indicating closed)");
+        door_status =0; 
+        distance = threshold + 20;
+      }
+    }
     og.set_led(LOW);
     read_cnt = (read_cnt+1)%100;
-    uint threshold = og.options[OPTION_DTH].ival;
-    door_status = (distance>threshold)?0:1;
-    if (og.options[OPTION_MNT].ival == OG_MNT_SIDE)    
-      door_status = 1-door_status;  // reverse logic for side mount
-
-    door_status_hist = (door_status_hist<<1) | door_status;
+    if (checkstatus_timeout == 0){
+      DEBUG_PRINTLN(F("First time checking status don't trigger a status change, set full history to current value"));
+      if (door_status) { door_status_hist = B11111111; }
+      else { door_status_hist = B00000000; }
+    }else{
+       door_status_hist = (door_status_hist<<1) | door_status;
+    }
+    //DEBUG_PRINT(F("Histogram value:"));
+    //DEBUG_PRINTLN(door_status_hist);
+    //DEBUG_PRINT(F("Vehicle Status:"));
+    //DEBUG_PRINTLN(vehicle_status);
     byte event = check_door_status_hist();
 
-    // write log record
+    //Upon change
     if(event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) {
+      //Debug Beep (only if sound is enabled)
+      if(og.options[OPTION_ALM].ival){
+        og.play_note(1000);
+        delay(500);
+        og.play_note(0);
+      }
+      DEBUG_PRINT(curr_utc_time);
+      if(event == DOOR_STATUS_JUST_OPENED)  {	
+        DEBUG_PRINTLN(F(" Sending State Change event to connected systems, value: DOOR_STATUS_JUST_OPENED")); }
+      else if(event == DOOR_STATUS_JUST_CLOSED) {	
+        DEBUG_PRINTLN(F(" Sending State Change event to connected systems, value: DOOR_STATUS_JUST_CLOSED")); }
+      else {
+        DEBUG_PRINTLN(F(" Sending State Change event to connected systems, value: OTHER")); 
+        DEBUG_PRINTLN(String(event,DEC));
+      }
+
+      // write log record
+      DEBUG_PRINTLN(" Update Local Log"); 
       LogStruct l;
       l.tstamp = curr_utc_time;
       l.status = door_status;
       l.dist = distance;
       og.write_log(l);
-    }
+      
+      // Blynk notification
+      byte ato = og.options[OPTION_ATO].ival;
+      if(curr_cloud_access_en && Blynk.connected() && ato) {
+        //The official firmware only sends these notifications on ato enabled (which seems a somewhat unrelated function)
+        //Maintain backwards compat and use same logic
+        DEBUG_PRINTLN(F(" Notify Blynk with text notification"));
+        if(event == DOOR_STATUS_JUST_OPENED)  {	
+          Blynk.notify(og.options[OPTION_NAME].sval + " just opened!");}
+        else if(event == DOOR_STATUS_JUST_CLOSED) {	
+          Blynk.notify(og.options[OPTION_NAME].sval + " just closed!");}
+      }
 
-    // report status to Blynk
-    if(curr_cloud_access_en && Blynk.connected()) {
-      Blynk.virtualWrite(BLYNK_PIN_RCNT, read_cnt);
-      Blynk.virtualWrite(BLYNK_PIN_DIST, distance);
-      (door_status) ? blynk_led.on() : blynk_led.off();
-      Blynk.virtualWrite(BLYNK_PIN_IP, get_ip());
-      blynk_lcd.print(0, 0, get_ip());
-      String str = ":";
-      str += og.options[OPTION_HTP].ival;
-      str += " " + get_ap_ssid();
-      blynk_lcd.print(0, 1, str);
-    }
+      // IFTTT notification
+      if(og.options[OPTION_IFTT].sval.length()>7) { // key size is at least 8
+        DEBUG_PRINTLN(F(" Notify IFTTT (State Change)")); 
+        http.begin("http://maker.ifttt.com/trigger/opengarage/with/key/"+og.options[OPTION_IFTT].sval);
+        http.addHeader("Content-Type", "application/json");
+        http.POST("{\"value1\":\""+String(event,DEC)+"\"}");
+        String payload = http.getString();
+        http.end();
+        if(payload.indexOf("Congratulations") >= 0) {
+          DEBUG_PRINTLN(F("  Successfully updated IFTTT"));
+        }else{
+          DEBUG_PRINT(F("  ERROR from IFTTT: "));
+          DEBUG_PRINTLN(payload);
+        }
+      }
 
+      //Mqtt notification
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        if (mqttclient.connected()) {
+          DEBUG_PRINTLN(F(" Update MQTT (State Change)"));
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/CHANGE",String(event,DEC)); 
+        }
+      }
+
+    } //End state change updates
+
+    //Send current status only on change and longer interval
+    if ((curr_utc_time >checkstatus_report_timeout) || (event == DOOR_STATUS_JUST_OPENED || event == DOOR_STATUS_JUST_CLOSED) ){
+      DEBUG_PRINT(curr_utc_time);
+      uint32_t ram = ESP.getFreeHeap();
+      Serial.printf(" RAM: %d ", ram);
+      if(event == DOOR_STATUS_REMAIN_OPEN)  {	
+        DEBUG_PRINTLN(F(" Sending State Refresh to connected systems, value: OPEN")); }
+      else if(event == DOOR_STATUS_REMAIN_CLOSED) {	
+        DEBUG_PRINTLN(F(" Sending State Refresh to connected systems, value: CLOSED")); }
+
+      // report status to Blynk
+      if(curr_cloud_access_en && Blynk.connected()) {
+        DEBUG_PRINTLN(F(" Update Blynk (State Refresh)"));
+        Blynk.virtualWrite(BLYNK_PIN_RCNT, read_cnt);
+        Blynk.virtualWrite(BLYNK_PIN_DIST, distance);
+        (door_status) ? blynk_led.on() : blynk_led.off();
+        Blynk.virtualWrite(BLYNK_PIN_IP, get_ip());
+        blynk_lcd.print(0, 0, get_ip());
+        String str = ":";
+        str += og.options[OPTION_HTP].ival;
+        str += " " + get_ap_ssid();
+        blynk_lcd.print(0, 1, str);
+      }
+      
+      //IFTTT only recieves state change events not ongoing status
+
+      //Mqtt update
+      if((og.options[OPTION_MQTT].sval.length()>8) && (mqttclient.connected())) {
+        DEBUG_PRINTLN(F(" Update MQTT (State Refresh)"));
+        if(door_status == DOOR_STATUS_REMAIN_OPEN)  {						// MQTT: If door open...
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","OPEN");
+          mqttclient.publish(og.options[OPTION_NAME].sval,"Open"); //Support existing mqtt code
+          //DEBUG_PRINTLN(curr_utc_time + " Sending MQTT State otification: OPEN");
+        } 
+        else if(door_status == DOOR_STATUS_REMAIN_CLOSED) {					// MQTT: If door closed...
+          mqttclient.publish(og.options[OPTION_NAME].sval + "/OUT/STATE","CLOSED");
+          mqttclient.publish(og.options[OPTION_NAME].sval,"Closed"); //Support existing mqtt code
+          //DEBUG_PRINTLN(curr_utc_time + " Sending MQTT State Notification: CLOSED");
+        }
+      }
+      //Set to run every 5 minutes -no need to continually send status when changes drive it
+      checkstatus_report_timeout= curr_utc_time + 120L; 
+    }
+    
+    //Process any built in automations
     perform_automation(event);
-
     checkstatus_timeout = curr_utc_time + og.options[OPTION_RIV].ival;
+    
   }
 }
 
@@ -690,20 +1016,23 @@ void time_keeping() {
   static ulong time_keeping_timeout = 0;
 
   if(!configured) {
-    DEBUG_PRINTLN(F("set time server"));
+    DEBUG_PRINTLN(F("Set time server"));
     configTime(0, 0, "pool.ntp.org", "time.nist.org", NULL);
     configured = true;
   }
 
-  if(!curr_utc_time || curr_utc_time > time_keeping_timeout) {
+  if(!curr_utc_time || (curr_utc_time > time_keeping_timeout)) {
     ulong gt = time(nullptr);
     if(!gt) {
       // if we didn't get response, re-try after 2 seconds
       time_keeping_timeout = curr_utc_time + 2;
     } else {
       curr_utc_time = gt;
-      DEBUG_PRINT(F("network time: "));
-      DEBUG_PRINTLN(curr_utc_time);
+      curr_utc_hour = (curr_utc_time % 86400)/3600;
+      DEBUG_PRINT(F("Updated time from NTP: "));
+      DEBUG_PRINT(curr_utc_time);
+      DEBUG_PRINT(" Hour: ");
+      DEBUG_PRINTLN(curr_utc_hour);
       // if we got a response, re-try after TIME_SYNC_TIMEOUT seconds
       time_keeping_timeout = curr_utc_time + TIME_SYNC_TIMEOUT;
       prev_millis = millis();
@@ -711,6 +1040,7 @@ void time_keeping() {
   }
   while(millis() - prev_millis >= 1000) {
     curr_utc_time ++;
+    curr_utc_hour = (curr_utc_time % 86400)/3600;
     prev_millis += 1000;
   }
 }
@@ -734,7 +1064,9 @@ void process_alarm() {
   }
 }
 
+
 void do_loop() {
+
   static ulong connecting_timeout;
   
   switch(og.state) {
@@ -747,19 +1079,26 @@ void do_loop() {
       server->on("/js", on_ap_scan);
       server->on("/cc", on_ap_change_config);
       server->on("/jt", on_ap_try_connect);
+      server->on("/resetall",on_reset_all);
       server->begin();
+      DEBUG_PRINTLN(F("Web Server endpoints (AP mode) registered"));
       og.state = OG_STATE_CONNECTED;
       DEBUG_PRINTLN(WiFi.softAPIP());
     } else {
       led_blink_ms = LED_SLOW_BLINK;
+      DEBUG_PRINT(F("Attempting to connect to SSID: "));
+      DEBUG_PRINTLN(og.options[OPTION_SSID].sval.c_str());
       start_network_sta(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
       og.config_ip();
       og.state = OG_STATE_CONNECTING;
       connecting_timeout = millis() + 60000;
     }
     break;
+
   case OG_STATE_TRY_CONNECT:
     led_blink_ms = LED_SLOW_BLINK;
+    DEBUG_PRINT(F("Attempting to connect to SSID: "));
+    DEBUG_PRINTLN(og.options[OPTION_SSID].sval.c_str());
     start_network_sta_with_ap(og.options[OPTION_SSID].sval.c_str(), og.options[OPTION_PASS].sval.c_str());
     og.config_ip();
     og.state = OG_STATE_CONNECTED;
@@ -767,6 +1106,9 @@ void do_loop() {
     
   case OG_STATE_CONNECTING:
     if(WiFi.status() == WL_CONNECTED) {
+      DEBUG_PRINT(F("Wireless connected, IP: "));
+      DEBUG_PRINTLN(WiFi.localIP());
+
       if(curr_local_access_en) {
         // use ap ssid as mdns name
         if(MDNS.begin(get_ap_ssid().c_str())) {
@@ -777,52 +1119,51 @@ void do_loop() {
         server->on("/jo", on_sta_options);
         server->on("/jl", on_sta_logs);
         server->on("/vo", on_sta_view_options);
+        server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
         server->on("/vl", on_sta_view_logs);
         server->on("/cc", on_sta_change_controller);
         server->on("/co", on_sta_change_options);
+        server->on("/db", on_sta_debug);
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
+        server->on("/clearlog", on_clear_log);
+        server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png","max-age=86400");
+        server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png","max-age=86400");
+        server->serveStatic("/ClosedAbsent.png", SPIFFS, "/ClosedAbsent.png","max-age=86400");
+        server->serveStatic("/ClosedPresent.png", SPIFFS, "/ClosedPresent.png","max-age=86400");
+        server->serveStatic("/Open.png", SPIFFS, "/Open.png","max-age=86400");
+        server->on("/resetall",on_reset_all);
+        server->on("/test",on_test);
         server->begin();
+        DEBUG_PRINTLN(F("Web Server endpoints (STA mode) registered"));
       }
       if(curr_cloud_access_en) {
         Blynk.config(og.options[OPTION_AUTH].sval.c_str()); // use the config function
         Blynk.connect();
+        DEBUG_PRINTLN(F("Blynk Connected"));
       }
-      og.state = OG_STATE_CONNECTED;
-      // save device IP and gateway information
-      
+      if(og.options[OPTION_MQTT].sval.length()>8) {
+        mqtt_connect_subscibe();
+        DEBUG_PRINTLN(F("MQTT Connected"));
+      }
       led_blink_ms = 0;
       og.set_led(LOW);
-      
-      DEBUG_PRINTLN(WiFi.localIP());
+      og.state = OG_STATE_CONNECTED;
+
     } else {
       if(millis() > connecting_timeout) {
         og.state = OG_STATE_INITIAL;
-        DEBUG_PRINTLN(F("timeout"));
+        DEBUG_PRINTLN(F("Wifi Connecting timeout"));
       }
     }
     break;
-  
-  case OG_STATE_CONNECTED:
-    if(curr_mode == OG_MOD_AP) {
-      server->handleClient();
-    } else {
-      if(WiFi.status() == WL_CONNECTED) {
-        if(curr_local_access_en)
-          server->handleClient();
-        if(curr_cloud_access_en)
-          Blynk.run();
-      } else {
-        og.state = OG_STATE_INITIAL;
-      }
-    }
-    break;
-    
+      
   case OG_STATE_RESTART:
     if(curr_local_access_en)
       server->handleClient();
     if(millis() > restart_timeout) {
       og.state = OG_STATE_INITIAL;
+      DEBUG_PRINTLN(F("Setting state to OG_STATE_INITIAL and restarting"));
       og.restart();
     }
     break;
@@ -835,16 +1176,34 @@ void do_loop() {
     og.state = OG_STATE_RESTART;
     break;
   
+  case OG_STATE_CONNECTED: //THIS IS THE MAIN LOOP
+    if(curr_mode == OG_MOD_AP) {
+      server->handleClient();
+      check_status_ap();
+    } else {
+      if(WiFi.status() == WL_CONNECTED) {
+        time_keeping();
+        check_status(); //This checks the door, sends info to services and processes the automation rules
+        if(curr_local_access_en)
+          server->handleClient();
+        if(curr_cloud_access_en)
+          Blynk.run();
+        //Handle MQTT
+        if(og.options[OPTION_MQTT].sval.length()>8) {
+          if (!mqttclient.connected()) {
+            mqtt_connect_subscibe();
+          }
+          else {mqttclient.loop();} //Processes MQTT Pings/keep alives
+        }
+      } else {
+        DEBUG_PRINTLN(F("State is CONNECTED but Wifi has no IP"));
+        og.state = OG_STATE_INITIAL;
+      }
+    }
+    break;
   }
-  
-  if(og.state == OG_STATE_CONNECTED && curr_mode == OG_MOD_STA) {
-    time_keeping();
-    check_status();
-  }
-  
-  if(curr_mode == OG_MOD_AP) {
-    check_status_ap();
-  }
+
+  //Nework independent functions, handle events like reset even when not connected
   process_ui();
   if(og.alarm)
     process_alarm();
@@ -852,6 +1211,7 @@ void do_loop() {
 
 BLYNK_WRITE(V1)
 {
+  DEBUG_PRINTLN(F("Received Blynk generated button request"));
   if(!og.options[OPTION_ALM].ival) {
     // if alarm is disabled, trigger right away
     if(param.asInt()) {

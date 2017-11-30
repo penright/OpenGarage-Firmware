@@ -19,17 +19,20 @@
  * along with this program.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-
+#include "lwip/tcp_impl.h" // losing bytes work around
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <time.h>
 #include <FS.h>
-// If compiling in Arduino, uncomment the following line
-//#include <BlynkSimpleEsp8266_SSL.h>
+
 #include <OpenGarage.h>
 
+void tcpCleanup()   // losing bytes work around
+{  while(tcp_tw_pcbs!=NULL)
+  {    tcp_abort(tcp_tw_pcbs);  }}
+  
 void do_setup();
 void do_loop();
 
@@ -39,4 +42,5 @@ void setup() {
 
 void loop() {
   do_loop();
+  tcpCleanup();       
 }

@@ -37,15 +37,19 @@ static const char* log_fname = LOG_FNAME;
 OptionStruct OpenGarage::options[] = {
   {"fwv", OG_FWV,      255, ""},
   {"acc", OG_ACC_LOCAL,  2, ""},
-  {"mnt", OG_MNT_CEILING,1, ""},
+  {"mnt", OG_MNT_CEILING,3, ""},
   {"dth", 50,        65535, ""},
-  {"riv", 4,           300, ""},
+  {"vth", 150,       65535, ""},
+  {"riv", 5,           300, ""},
   {"alm", OG_ALM_5,      2, ""},
   {"htp", 80,        65535, ""},
   {"cdt", 1000,       5000, ""},
   {"mod", OG_MOD_AP,   255, ""},
   {"ati", 30,          720, ""},
   {"ato", OG_AUTO_NONE,255, ""},
+  {"atib", 3,          24, ""},
+  {"atob", OG_AUTO_NONE,255, ""},
+  {"atoc", OG_AUTO_NONE,255, ""},
   {"usi", 0,             1, ""},
   {"ssid", 0, 0, ""},  // string options have 0 max value
   {"pass", 0, 0, ""},
@@ -53,6 +57,7 @@ OptionStruct OpenGarage::options[] = {
   {"dkey", 0, 0, DEFAULT_DKEY},
   {"name", 0, 0, DEFAULT_NAME},
   {"iftt", 0, 0, ""},
+  {"mqtt", 0, 0, "-.-.-.-"},
   {"dvip", 0, 0, "-.-.-.-"},
   {"gwip", 0, 0, "-.-.-.-"},
   {"subn", 0, 0, "255.255.255.0"}
@@ -76,6 +81,8 @@ void OpenGarage::begin() {
   
   pinMode(PIN_ECHO, INPUT);
   pinMode(PIN_BUTTON, INPUT_PULLUP);
+
+  pinMode(PIN_SWITCH, INPUT_PULLUP);
   
   state = OG_STATE_INITIAL;
   
@@ -109,7 +116,7 @@ void OpenGarage::options_reset() {
   if(!SPIFFS.remove(config_fname)) {
     DEBUG_PRINTLN(F("failed to remove config file"));
     return;
-  }
+  }else{DEBUG_PRINTLN(F("Removed config file"));}
   DEBUG_PRINTLN(F("ok"));
 }
 
@@ -117,7 +124,7 @@ void OpenGarage::log_reset() {
   if(!SPIFFS.remove(log_fname)) {
     DEBUG_PRINTLN(F("failed to remove log file"));
     return;
-  }
+  }else{DEBUG_PRINTLN(F("Removed log file"));}
   DEBUG_PRINTLN(F("ok"));  
 }
 
@@ -142,9 +149,9 @@ void OpenGarage::options_load() {
     String name = file.readStringUntil(':');
     String sval = file.readStringUntil('\n');
     sval.trim();
-    /*DEBUG_PRINT(name);
+    DEBUG_PRINT(name);
     DEBUG_PRINT(":");
-    DEBUG_PRINTLN(sval);*/
+    DEBUG_PRINTLN(sval);
     nopts++;
     if(nopts>NUM_OPTIONS+1) break;
     int idx = find_option(name);
@@ -179,19 +186,25 @@ void OpenGarage::options_save() {
 }
 
 ulong OpenGarage::read_distance_once() {
+  //TODO handle max value as handled error in the UI - check long distance for car detection
   digitalWrite(PIN_TRIG, LOW);
   delayMicroseconds(2);
   digitalWrite(PIN_TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(PIN_TRIG, LOW);
-  // also clamp the result to maximum value 32767
   // wait till echo pin's rising edge
-  while(digitalRead(PIN_ECHO)==LOW);
+  unsigned long quit_time=micros()+26233L;
+  while((digitalRead(PIN_ECHO)==LOW)&& (micros()<quit_time));
+  {//Do nothing
+  };
   unsigned long start_time = micros();
-  // wait till echo pin's falling edge
-  while(digitalRead(PIN_ECHO)==HIGH);
+  quit_time=start_time+26233L;
+  //wait till echo pin's falling edge
+  while((digitalRead(PIN_ECHO)==HIGH) && (micros()<quit_time));
   ulong lapse = micros() - start_time;
-  if (lapse>32767L) lapse = 32767L;
+  if (lapse>26233L) lapse = 26233L;
+  //DEBUG_PRINTLN(F("Distance issue, setting to low value"));
+  //DEBUG_PRINT(lapse);
   return lapse;
 }
 

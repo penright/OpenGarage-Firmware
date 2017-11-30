@@ -1,9 +1,62 @@
 
+Fork of https://github.com/OpenGarage/OpenGarage-Firmware
+
+Adds:
+=======
+* Support for magnetic or contact based door switch (Installed at bottom or top)
+* Built in automation to close door at a certain time (No external service required)
+* Built in MQTT support - allows adding workflow using things like NodeRed
+* Support for reading/reporting vehicle occupancy status (when door is closed at least)
+* Some updates to main integrated web page (not app) (See screenshots)
+  * Change button text to reflect the specific action (open or close)
+  * Text displays Sending command when you click the button so you can tell it does something
+  * Add graphic to home page indicating door status (and/or vehicle occupancy status)
+  * Add text displaying vehicle occupancy status (if known)
+  * Close or Open state color coded
+  * More detail on wireless signal strength
+  * Status moved to top, wireless summary moved to front
+  * Tweaks to reset AP instructions
+  * If the senor reports out of range value (changed to 450cm) it displays in red
+* Log Page updates (See screenshots)
+  * Clear log button and related functions added
+  * Ordering changed to match mobile app 
+  * Graphic added to better match mobile app
+* AP Home Page change (See screenshots)
+  * Wireless signal strength and assesment provided in table
+  * Hide Blynk token field to focus on wireless access only to make Blynk, IFTTT and MQTT procedures match 
+* Option page changes
+  * Support for added functions - like magnetic switch sensor type and close at certain time
+  * Support for vehicle detection threshold
+  * Support for seperately enabling open/close change notifications 
+  * Vehicle change notification option added - but not yet wired in
+* API Changes
+  * Explicit close or open support added, unlike a click these are state aware (allows you to easily fire off a close activity without worrying or first querying if the door is actually open and vice versa)
+  - This is supported via HTTP and MQTT
+    * Debug page added - this displays extra details like BSSID, free memory, compile time - its JSON only at this point - no corresponding user page
+  * Reset all function added - for users without a reset button installed
+* Debug improvements - Added tons of serial debug commands, if you get nothing else out of this verbose logging is now included
+* Tons of little usability changes - Quick beeps on status changes as an example
+ Check committ history for details
+
+Issues Fixed:
+=======
+* WDT Resets if ultrasonic sensor not connected
+* Blynk open/close notifications are no longer tied to close in X minutes automation
+* Save of SSID/Password failure in certain circumstances
+* Time sync issues if code is delayed for any reason (mostly an issue with MQTT code)
+* Don't register state change on boot if the door is open
+
+
+Notes specific to this fork:
+The mobile app doesn't know about some settings so can't display them (like magnetic sensor support). It doesn't seem to impact the app though.
+If you want the graphics in the log and home page - you need to use the Arduino programming env (specifically the ESPFlash tool to upload them to the flash - at least until I figure out how to send them on the fly)
+
+
 This folder contains the OpenGarage firmware code for Arduino with ESP8266.
 
 For details, visit [http://opengarage.io](http://opengarage.io)
 
-<img src="Screenshots/1_og_ap.png" height=200> <img src="Screenshots/2_og_home.png" height=200> <img src="Screenshots/3_og_log.png" height=200> <img src="Screenshots/4_og_options.png" height=200> <img src="Screenshots/5_og_update.png" height=200> <img src="Screenshots/6_og_blynk_app.png" height=200>
+<img src="Screenshots/1_og_ap.png" height=200> <img src="Screenshots/2_og_home.png" height=200> <img src="Screenshots/3_og_log.png" height=200> <img src="Screenshots/4_og_options.png" height=200><img src="Screenshots/7_og_options_int.png" height=200> <img src="Screenshots/5_og_update.png" height=200> <img src="Screenshots/6_og_blynk_app.png" height=200>
 
 Updates:
 =======
@@ -13,12 +66,21 @@ Updates:
 Requirement:
 ===========
 
-* Arduino 1.6.5 (the firmware may NOT compile on newer Arduino versions)
+* Arduino 1.6.13 (the firmware may NOT compile on newer Arduino versions)
 * ESP8266 core for Arduino (https://github.com/esp8266/Arduino)
 * Blynk library for Arduino (https://github.com/blynkkk/blynk-library)
+* MQTT PubSUbClient https://github.com/Imroy/pubsubclient
 * This (OpenGarage) library
 
-Copy the OpenGarage library to your Arduino's libraries folder. You also need to update two files in the ESP8266 core and Blynk library. See README.txt in the Modifications folder for details.
+Setting up a Dev Environment
+===========
+
+* Install 1.6.13 Arduino Client
+* Install Blynk via the Manage Libraries dialog
+* Install 2.3.0 of the ESP8266 Support via borad manager (Later versions consume too much memory)
+* Manually Install the pubsubclient library refrenced above (IMroy version)
+* Download this repository and extract the OpenGarage library to your Arduino's libraries folder. WHen done make sure the structure matches Libraries\OpenGarage\Examples
+* Copy the .h file from the modifications file to your system. On windows the file to replace can be found under the arduino structure in your profile. You cand find this by entrering in the run bar %LOCALAPPDATA%\Arduino15 and finding the file. See README under the modifications folder for details
 
 
 Compilation:
@@ -122,3 +184,16 @@ The current firmware version is displayed at the bottom of the homepage, as well
 
 If the update ever fails, power cycle (unplug power and plug back power) the device and try again. If it still doesn't work, you can update firmware through the USB port (see instructions above).
 
+
+Using Magnetic Switch:
+===========
+
+Note: I don't have an official device, so pictures/corrections appreciated.
+
+* Step 1 - Get your device on your network using stock firmware and working through the built in web interface.
+* Step 2 - Update to my firmware via the webpage (use the master version). You can use the file og_1.0.6-LawrenceJeff.bin found in the compiled directory of this repository.
+* Step 3 - If you plan on using the integrated webpage (vs the app) you may also want the status pictures that go along with the status, this isn't required but makes it easier to use. To do this is currently kind of a pain, you need to use the Arduino env (with ESP tools and ESP data upload installed) or using ESPflasher or similiar tool burn the other bin (Compiled directory) to 0x300000. Note this will erase your config so save any ifft or Blynk keys first and be prepared to do the network setup again.
+* Step 4 - Its not required, but if you have a 200-1k ohm resistor its a good idea to add it to the end of one of the leads. This is in case you ever update the firmware and the GPIO goes high it won't have a straight path to ground. The firmware uses the built in pull up but sometimes chips can do odd things before the code initializes
+* Step 5 - With the device turned off and not powered, connect one end the switch to GPIO4 and one to GND. According to the schematic these pins are present on the JMP2 header on the board Pin 1 (GND) and Pin 3 (GPIO4). Note: This is in revision 1.1 - if your board is different you may need to adjust. Double check if the silkscreen is labeled that you have GPIO4 and Ground
+At this point you should have GPIO4 --- ----RESISTOR------- SENSOR --------GND. Make sure your wires don't touch anything else
+* Step 6 - Power up the device and go to the built in webpage. Go to the Options page and then select the sensor type dropdown. For most sensors select Switch (Low Mount). This is for a standard sensor mounted at the bottom of the door so that it is in contact when closed. If your device is the opposite type or mounted opposite change to Switch (High Mount). It won't hurt anything to select the wrong one as it reverses the logic. When using this mode the sensor will always report either Threshold + 20 or Threshold -20 as the distance so that all existing APIs work.
