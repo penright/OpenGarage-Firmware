@@ -53,25 +53,45 @@ id('butt').disabled=true;id('ssid').disabled=true;id('pass').disabled=true;id('a
 }
 
 function loadSSIDs() {
-  //Hide auth info to more clearly support multiple tools without breaking app
-  id('auth').hidden =true;
-  id('lbl_auth').hidden =true;
-  var xhr=new XMLHttpRequest();
-  xhr.onreadystatechange=function() {
-    if(xhr.readyState==4 && xhr.status==200) {
-      id('rd').deleteRow(1);
-      var i;
-      var jd=JSON.parse(xhr.responseText);
-      //TODO Sort and remove dups
-      for(i=0;i<jd.ssids.length;i++) {
-        var signalstrength= jd.rssis[i]>-71?'Ok':(jd.rssis[i]>-81?'Weak':'Poor');
-        var row=id('rd').insertRow(-1);
-        row.innerHTML ="<tr><td><input name='ssids' id='rd"+i+"' onclick='sel(" + i + ")' type='radio' value='"+jd.ssids[i]+"'>" + jd.ssids[i] + "</td>"  + "<td align='center'>"+signalstrength+"</td>" + "<td align='center'>("+jd.rssis[i] +" dbm)</td>" + "</tr>";
-      }
-    }
-  };
-  xhr.open('GET','js',true); xhr.send();
-  }
-  setTimeout(loadSSIDs, 1000);
+//Hide auth info to more clearly support multiple tools without breaking app
+id('auth').hidden =true;
+id('lbl_auth').hidden =true;
+var xhr=new XMLHttpRequest();
+xhr.onreadystatechange=function() {
+if(xhr.readyState==4 && xhr.status==200) {
+id('rd').deleteRow(1);
+var i;
+var jd=JSON.parse(xhr.responseText);
+//First build list of AP
+var tmp=[];
+for(i=0;i<jd.ssids.length;i++){
+if(tmp.indexOf(jd.ssids[i])==-1){
+tmp.push(jd.ssids[i]);
+}
+}
+//
+tmp=tmp.sort(); // Sort the AP List
+// Load up a list of SSID whith value 0
+var listSSID=[];
+for(i=0;i<tmp.length;i++) {
+listSSID[tmp[i]]=0;
+}
+// Now loop back through list of SSID and put correct values
+for(i=0;i<jd.ssids.length;i++){
+if(jd.rssis[i]<listSSID[jd.ssids[i]]){
+listSSID[jd.ssids[i]]=jd.rssis[i];
+}
+}
+// loop throug the new list of SSID object and build table
+for(prop in listSSID) {
+var signalstrength= listSSID[prop]>-71?'Ok':(listSSID[prop]>-81?'Weak':'Poor');
+var row=id('rd').insertRow(-1);
+row.innerHTML ="<tr><td><input name='ssids' id='rd"+i+"' onclick='sel(" + i + ")' type='radio' value='"+prop+"'>"+prop+"</td>"+"<td align='center'>"+signalstrength+"</td>"+"<td align='center'>("+listSSID[prop]+" dbm)</td>" + "</tr>";
+}
+}
+};
+xhr.open('GET','js',true); xhr.send();
+}
+setTimeout(loadSSIDs, 1000);
 </script>
 </body>)";
