@@ -111,27 +111,23 @@ void on_home()
   String html = "";
   
   if(curr_mode == OG_MOD_AP) {
-    html += FPSTR(html_mobile_header); 
-    html += FPSTR(html_ap_home);
+    html = FPSTR(ap_home_html);
   } else {
-    html += FPSTR(html_jquery_header);
-    html += FPSTR(html_sta_home);
+    html = FPSTR(sta_home_html);
   }
   server_send_html(html);
 }
 
 void on_sta_view_options() {
   if(curr_mode == OG_MOD_AP) return;
-  String html = FPSTR(html_jquery_header);
-  html += FPSTR(html_sta_options);
+  String html = FPSTR(sta_options_html);
   server->send(200, "text/html", html);
   DEBUG_PRINTLN(F("Complete sending page"));
 }
 
 void on_sta_view_logs() {
   if(curr_mode == OG_MOD_AP) return;
-  String html = FPSTR(html_jquery_header);
-  html += FPSTR(html_sta_logs);
+  String html = FPSTR(sta_logs_html);
   server_send_html(html);
 }
 
@@ -464,7 +460,6 @@ void on_ap_scan() {
 
 void on_ap_change_config() {
   if(curr_mode == OG_MOD_STA) return;
-  String html = FPSTR(html_mobile_header);
   if(server->hasArg("ssid")&&server->arg("ssid").length()!=0) {
     og.options[OPTION_SSID].sval = server->arg("ssid");
     og.options[OPTION_PASS].sval = server->arg("pass");
@@ -626,8 +621,7 @@ byte check_door_status_hist() {
 }
 
 void on_sta_update() {
-  String html = FPSTR(html_jquery_header); 
-  html += FPSTR(html_sta_update);
+  String html = FPSTR(sta_update_html);
   server_send_html(html);
 }
 
@@ -999,8 +993,8 @@ void check_status() {
           //DEBUG_PRINTLN(curr_utc_time + " Sending MQTT State Notification: CLOSED");
         }
       }
-      //Set to run every 5 minutes -no need to continually send status when changes drive it
-      checkstatus_report_timeout= curr_utc_time + 120L; 
+      //Set to run every 5 seconds
+      checkstatus_report_timeout= curr_utc_time + 5; 
     }
     
     //Process any built in automations
@@ -1119,7 +1113,7 @@ void do_loop() {
         server->on("/jo", on_sta_options);
         server->on("/jl", on_sta_logs);
         server->on("/vo", on_sta_view_options);
-        server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
+        //server->serveStatic("/sta_options.html", SPIFFS, "/sta_options.html");
         server->on("/vl", on_sta_view_logs);
         server->on("/cc", on_sta_change_controller);
         server->on("/co", on_sta_change_options);
@@ -1127,13 +1121,13 @@ void do_loop() {
         server->on("/update", HTTP_GET, on_sta_update);
         server->on("/update", HTTP_POST, on_sta_upload_fin, on_sta_upload);
         server->on("/clearlog", on_clear_log);
-        server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png","max-age=86400");
+        /*server->serveStatic("/DoorOpen.png", SPIFFS, "/DoorOpen.png","max-age=86400");
         server->serveStatic("/DoorShut.png", SPIFFS, "/DoorShut.png","max-age=86400");
         server->serveStatic("/ClosedAbsent.png", SPIFFS, "/ClosedAbsent.png","max-age=86400");
         server->serveStatic("/ClosedPresent.png", SPIFFS, "/ClosedPresent.png","max-age=86400");
-        server->serveStatic("/Open.png", SPIFFS, "/Open.png","max-age=86400");
+        server->serveStatic("/Open.png", SPIFFS, "/Open.png","max-age=86400");*/
         server->on("/resetall",on_reset_all);
-        server->on("/test",on_test);
+        //server->on("/test",on_test);
         server->begin();
         DEBUG_PRINTLN(F("Web Server endpoints (STA mode) registered"));
       }

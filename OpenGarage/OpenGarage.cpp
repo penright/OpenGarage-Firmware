@@ -90,7 +90,8 @@ void OpenGarage::begin() {
     DEBUG_PRINTLN(F("failed to mount file system!"));
   }
   
-  play_startup_tune();
+  // play a tune at startup
+  //play_startup_tune();
 }
 
 void OpenGarage::options_setup() {

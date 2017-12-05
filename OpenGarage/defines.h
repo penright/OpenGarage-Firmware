@@ -24,17 +24,17 @@
 #define _DEFINES_H
 
 /** Firmware version, hardware version, and maximal values */
-#define OG_FWV    106   // Firmware version: 106 means 1.0.6
+#define OG_FWV    107   // Firmware version: 107 means 1.0.7
 
 /** GPIO pins */
-#define PIN_RELAY  15 //D8
+#define PIN_RELAY  15 //D8 on nodemcu
 #define PIN_BUTTON  0
-#define PIN_TRIG   12 //D6
-#define PIN_ECHO   14 //D5
+#define PIN_TRIG   12 //D6 on nodemcu
+#define PIN_ECHO   14 //D5 on nodemcu
 #define PIN_LED     2
 #define PIN_RESET  16
 #define PIN_BUZZER 13
-#define PIN_SWITCH 4 //D2 on nodemuc
+#define PIN_SWITCH 4  //D2 on nodemcu
 
 // Default device name
 #define DEFAULT_NAME    "My OpenGarage"
@@ -71,7 +71,6 @@
 #define OG_NOTIFY_DC    0x02
 #define OG_NOTIFY_VL    0x03
 #define OG_NOTIFY_VA    0x04
-
 
 #define OG_STATE_INITIAL        0
 #define OG_STATE_CONNECTING     1
@@ -111,9 +110,9 @@ typedef enum {
   OPTION_MOD,     // mode
   OPTION_ATI,     // automation interval (in minutes)
   OPTION_ATO,     // automation options
-  OPTION_ATIB,     // automation interval B (in hours)
-  OPTION_ATOB,     // automation options B
-  OPTION_ATOC,     // automation options C
+  OPTION_ATIB,    // automation interval B (in hours)
+  OPTION_ATOB,    // automation options B
+  OPTION_ATOC,    // automation options C
   OPTION_USI,     // use static IP
   OPTION_SSID,    // wifi ssid
   OPTION_PASS,    // wifi password
@@ -139,7 +138,7 @@ typedef enum {
 #define TIME_SYNC_TIMEOUT  1800 //Issues connecting to MQTT can throw off the time function, sync more often
 
 /** Serial debug functions */
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 #if defined(SERIAL_DEBUG)
 
   #define DEBUG_BEGIN(x)   { delay(2000); Serial.begin(x); }
